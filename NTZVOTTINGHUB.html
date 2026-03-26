@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NTZ VOTTING HUB</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #050508;
+  --bg1: #0c0c14;
+  --bg2: #12121e;
+  --bg3: #1a1a2a;
+  --border: #252535;
+  --border2: #303048;
+  --primary: #4f8ef7;
+  --primary-dim: rgba(79,142,247,0.15);
+  --secondary: #a855f7;
+  --secondary-dim: rgba(168,85,247,0.12);
+  --accent: #22d3ee;
+  --green: #10b981;
+  --green-dim: rgba(16,185,129,0.12);
+  --yellow: #f59e0b;
+  --red: #ef4444;
+  --red-dim: rgba(239,68,68,0.12);
+  --text: #f0f0ff;
+  --text2: #a0a0c0;
+  --text3: #606080;
+  --r: 10px;
+  --r2: 14px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.6);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* ─── NOISE OVERLAY ─── */
+body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");pointer-events:none;z-index:9999}
+
+/* ─── AURORA BG ─── */
+.aurora{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.aurora-blob{position:absolute;border-radius:50%;filter:blur(80px);animation:drift 18s ease-in-out infinite}
+.aurora-blob:nth-child(1){width:600px;height:600px;background:radial-gradient(circle,rgba(79,142,247,.08),transparent 70%);top:-200px;left:-100px;animation-delay:0s}
+.aurora-blob:nth-child(2){width:500px;height:500px;background:radial-gradient(circle,rgba(168,85,247,.06),transparent 70%);bottom:-150px;right:-100px;animation-delay:-6s}
+.aurora-blob:nth-child(3){width:400px;height:400px;background:radial-gradient(circle,rgba(34,211,238,.05),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:-12s}
+@keyframes drift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-20px) scale(1.05)}66%{transform:translate(-20px,30px) scale(.95)}}
+
+/* ─── LAYOUT ─── */
+#app{position:relative;z-index:1}
+
+/* ─── TOPBAR ─── */
+.topbar{background:rgba(12,12,20,.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;padding:0 24px}
+.topbar-inner{max-width:1200px;margin:0 auto;height:62px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.logo-mark{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;letter-spacing:-1px;flex-shrink:0}
+.logo-text{font-weight:800;font-size:15px;letter-spacing:.5px}
+.logo-text span{color:var(--primary)}
+.logo-badge{font-size:9px;font-family:'JetBrains Mono',monospace;background:linear-gradient(90deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:600;letter-spacing:1px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.user-pill{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:999px;cursor:pointer;transition:all .2s;font-size:13px}
+.user-pill:hover{border-color:var(--border2)}
+.avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.avatar.admin-av{background:linear-gradient(135deg,#f59e0b,#ef4444)}
+.nav-btn{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.nav-btn:hover{border-color:var(--primary);color:var(--primary)}
+.nav-btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.nav-btn.primary:hover{background:#3a7be8;box-shadow:0 0 20px rgba(79,142,247,.3)}
+
+/* ─── PAGE WRAPPER ─── */
+.page{display:none;min-height:calc(100vh - 62px)}
+.page.active{display:block}
+
+/* ─── AUTH PAGES ─── */
+.auth-wrap{min-height:calc(100vh - 62px);display:flex;align-items:center;justify-content:center;padding:32px 16px}
+.auth-box{width:100%;max-width:420px;background:var(--bg1);border:1px solid var(--border);border-radius:var(--r2);padding:36px;box-shadow:var(--shadow-lg)}
+.auth-box h2{font-size:22px;font-weight:700;margin-bottom:4px}
+.auth-box .sub{font-size:14px;color:var(--text2);margin-bottom:28px}
+.auth-tabs{display:flex;gap:0;background:var(--bg2);border-radius:8px;padding:3px;margin-bottom:24px;border:1px solid var(--border)}
+.auth-tab{flex:1;padding:8px;border-radius:6px;border:none;background:transparent;color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;text-align:center}
+.auth-tab.active{background:var(--bg1);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.3)}
+
+/* ─── FORM ─── */
+.fg{margin-bottom:16px}
+.fg label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase}
+.fg input,.fg textarea,.fg select{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;outline:none;transition:border-color .2s}
+.fg input:focus,.fg textarea:focus,.fg select:focus{border-color:var(--primary)}
+.fg textarea{resize:vertical;min-height:70px}
+.fg .hint{font-size:11px;color:var(--text3);margin-top:4px}
+.err-msg{font-size:12px;color:var(--red);margin-top:6px;display:none}
+.err-msg.show{display:block}
+.btn{padding:11px 20px;border-radius:var(--r);border:none;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap}
+.btn-full{width:100%}
+.btn-primary{background:linear-gradient(135deg,var(--primary),#3a7be8);color:#fff}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(79,142,247,.35)}
+.btn-secondary{background:var(--bg2);border:1px solid var(--border);color:var(--text2)}
+.btn-secondary:hover{border-color:var(--border2);color:var(--text)}
+.btn-danger{background:var(--red-dim);border:1px solid rgba(239,68,68,.3);color:var(--red)}
+.btn-danger:hover{background:var(--red);color:#fff}
+.btn-sm{padding:7px 12px;font-size:12px;border-radius:7px}
+.btn-xs{padding:5px 9px;font-size:11px;border-radius:6px}
+
+/* ─── MAIN LAYOUT ─── */
+.main-wrap{max-width:1200px;margin:0 auto;padding:28px 20px}
+.main-grid{display:grid;grid-template-columns:280px 1fr;gap:24px;align-items:start}
+@media(max-width:900px){.main-grid{grid-template-columns:1fr}}
+
+/* ─── SIDEBAR ─── */
+.sidebar{}
+.sidebar-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:16px}
+.sidebar-card h3{font-size:13px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text2);margin-bottom:14px}
+.nav-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;transition:all .2s;font-size:14px;color:var(--text2);border:1px solid transparent}
+.nav-link:hover{background:var(--bg2);color:var(--text)}
+.nav-link.active{background:var(--primary-dim);color:var(--primary);border-color:rgba(79,142,247,.2)}
+.nav-link .ico{font-size:15px;width:20px;text-align:center}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.stat-box .num{font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--primary)}
+.stat-box .lbl{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* ─── CONTENT ─── */
+.content-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap}
+.content-header h2{font-size:20px;font-weight:700}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600;border:1px solid}
+.badge-live{color:var(--green);border-color:rgba(16,185,129,.3);background:var(--green-dim)}
+.badge-ended{color:var(--text3);border-color:var(--border);background:var(--bg2)}
+.badge-primary{color:var(--primary);border-color:rgba(79,142,247,.3);background:var(--primary-dim)}
+.badge-yellow{color:var(--yellow);border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.08)}
+.badge-purple{color:var(--secondary);border-color:rgba(168,85,247,.3);background:var(--secondary-dim)}
+
+/* ─── POLL CARD ─── */
+.poll-list{display:flex;flex-direction:column;gap:16px}
+.poll-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;transition:border-color .2s}
+.poll-card:hover{border-color:var(--border2)}
+.poll-card-top{padding:20px 20px 16px}
+.poll-card-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px}
+.poll-card-title{flex:1;font-size:17px;font-weight:700;line-height:1.35}
+.poll-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.poll-actions-bar{display:flex;gap:8px;flex-wrap:wrap;padding:14px 20px;background:var(--bg);border-top:1px solid var(--border)}
+
+/* ─── OPTION ROW ─── */
+.option-list{display:flex;flex-direction:column;gap:8px}
+.opt-row{position:relative;display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s;overflow:hidden}
+.opt-row.disabled-opt{opacity:.45;cursor:not-allowed}
+.opt-row:not(.disabled-opt):hover{border-color:var(--primary)}
+.opt-row.selected{border-color:var(--primary);background:var(--primary-dim)}
+.opt-row.winner-opt{border-color:rgba(16,185,129,.4)}
+.opt-bar{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,rgba(79,142,247,.12),transparent);transition:width .7s cubic-bezier(.16,1,.3,1);pointer-events:none}
+.opt-row.winner-opt .opt-bar{background:linear-gradient(90deg,rgba(16,185,129,.12),transparent)}
+.opt-radio{width:17px;height:17px;border-radius:50%;border:2px solid var(--border2);flex-shrink:0;position:relative;z-index:1;transition:.2s}
+.opt-row.selected .opt-radio{border-color:var(--primary)}
+.opt-row.selected .opt-radio::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--primary)}
+.opt-label{flex:1;font-size:14px;position:relative;z-index:1}
+.opt-stats{text-align:right;position:relative;z-index:1;min-width:56px}
+.opt-pct{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600}
+.opt-cnt{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+.hidden-stats{display:flex;align-items:center;justify-content:flex-end;min-width:56px}
+.lock-ico{font-size:14px;opacity:.3}
+
+/* ─── CHART MODAL ─── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg1);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);transform:scale(.96) translateY(8px);transition:transform .25s}
+.modal-overlay.open .modal{transform:scale(1) translateY(0)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border)}
+.modal-header h3{font-size:16px;font-weight:700}
+.modal-close{width:30px;height:30px;border-radius:7px;background:var(--bg2);border:1px solid var(--border);color:var(--text2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:.2s}
+.modal-close:hover{border-color:var(--red);color:var(--red)}
+.modal-body{padding:24px}
+.chart-tabs{display:flex;gap:8px;margin-bottom:20px}
+.chart-tab{padding:7px 16px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;transition:.2s}
+.chart-tab.active{background:var(--primary-dim);border-color:rgba(79,142,247,.4);color:var(--primary)}
+.chart-wrap{position:relative;height:300px;display:flex;align-items:center;justify-content:center}
+canvas{max-width:100%!important}
+
+/* ─── REWARD CODE ─── */
+.reward-box{background:var(--bg);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:16px;margin-top:14px}
+.reward-label{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--yellow);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.reward-code-display{display:flex;align-items:center;gap:10px}
+.reward-code{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;letter-spacing:4px;color:var(--yellow);flex:1}
+.copy-btn{padding:7px 13px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:7px;color:var(--yellow);font-size:12px;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:.2s}
+.copy-btn:hover{background:var(--yellow);color:#000}
+
+/* ─── ADMIN CREATE PANEL ─── */
+.create-panel{background:var(--bg1);border:1px solid rgba(79,142,247,.2);border-radius:var(--r2);padding:24px;margin-bottom:24px}
+.create-panel-header{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.create-panel-header h2{font-size:17px;font-weight:700}
+.panel-divider{height:1px;background:var(--border);margin:18px 0}
+.opt-builder{display:flex;flex-direction:column;gap:8px}
+.opt-build-row{display:flex;align-items:center;gap:8px}
+.opt-build-row input{flex:1}
+.opt-fake{width:90px;flex-shrink:0}
+.opt-hidden-msg{width:100%}
+.opt-build-controls{display:flex;gap:6px;flex-shrink:0}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:none;padding-bottom:0}
+.toggle-label{font-size:14px}
+.toggle-sub{font-size:12px;color:var(--text3);margin-top:1px}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--bg3);border-radius:999px;cursor:pointer;transition:.25s;border:1px solid var(--border)}
+.toggle-slider::before{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:var(--text3);left:2px;top:2px;transition:.25s}
+.toggle input:checked+.toggle-slider{background:var(--primary);border-color:var(--primary)}
+.toggle input:checked+.toggle-slider::before{transform:translateX(18px);background:#fff}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.grid2{grid-template-columns:1fr}}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:600px){.grid3{grid-template-columns:1fr}}
+
+/* ─── EMPTY STATE ─── */
+.empty{text-align:center;padding:60px 20px}
+.empty-ico{font-size:48px;opacity:.2;margin-bottom:14px}
+.empty h3{font-size:17px;font-weight:600;color:var(--text2);margin-bottom:6px}
+.empty p{font-size:14px;color:var(--text3)}
+
+/* ─── COUNTDOWN ─── */
+.countdown{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500}
+
+/* ─── TOAST ─── */
+.toast-stack{position:fixed;bottom:20px;right:20px;z-index:9000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{padding:11px 16px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;font-size:13px;max-width:300px;box-shadow:var(--shadow);transform:translateX(120%);transition:transform .3s cubic-bezier(.16,1,.3,1);pointer-events:none}
+.toast.show{transform:translateX(0)}
+.toast.t-success{border-color:rgba(16,185,129,.4);color:var(--green)}
+.toast.t-error{border-color:rgba(239,68,68,.4);color:var(--red)}
+.toast.t-info{border-color:rgba(79,142,247,.4);color:var(--primary)}
+
+/* ─── PROFILE ─── */
+.profile-header{background:linear-gradient(135deg,var(--bg2),var(--bg1));border:1px solid var(--border);border-radius:var(--r2);padding:28px;margin-bottom:20px;display:flex;align-items:center;gap:20px}
+.profile-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex-shrink:0}
+.profile-avatar.admin-av-lg{background:linear-gradient(135deg,#f59e0b,#ef4444)}
+.profile-info h2{font-size:20px;font-weight:700}
+.profile-info p{font-size:14px;color:var(--text2);margin-top:3px}
+.admin-crown{display:inline-flex;align-items:center;gap:5px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:999px;padding:3px 10px;font-size:11px;color:var(--yellow);font-weight:600;margin-top:6px}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ─── ANIMATIONS ─── */
+@keyframes fadein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.anim{animation:fadein .3s ease-out both}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:640px){
+  .topbar{padding:0 14px}
+  .main-wrap{padding:16px}
+  .poll-card-top{padding:16px}
+  .create-panel{padding:16px}
+  .auth-box{padding:24px 20px}
+}
+</style>
+</head>
+<body>
+<div class="aurora"><div class="aurora-blob"></div><div class="aurora-blob"></div><div class="aurora-blob"></div></div>
+<div id="app">
+
+<!-- ═══════════════ TOPBAR ═══════════════ -->
+<nav class="topbar">
+  <div class="topbar-inner">
+    <a class="logo-mark" href="#">
+      <div class="logo-icon">NV</div>
+      <div>
+        <div class="logo-text">NTZ <span>VOTTING</span> HUB</div>
+        <div class="logo-badge">UPDATE ✦ v2.0</div>
+      </div>
+    </a>
+    <div class="topbar-right" id="topbar-right">
+      <!-- injected by JS -->
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════ PAGE: AUTH ═══════════════ -->
+<div class="page active" id="page-auth">
+  <div class="auth-wrap">
+    <div class="auth-box anim">
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Đăng Nhập</button>
+        <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Tạo Tài Khoản</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <div id="form-login">
+        <div class="fg">
+          <label>Tên Đăng Nhập</label>
+          <input type="text" id="l-username" placeholder="username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <div class="fg">
+          <label>Mật Khẩu</label>
+          <input type="password" id="l-password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+          <div class="err-msg" id="l-err">Tên đăng nhập hoặc mật khẩu không đúng!</div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="doLogin()">Đăng Nhập</button>
+      </div>
+
+      <!-- REGISTER FORM -->
+      <div id="form-register" style="display:none">
+        <div class="fg">
+          <label>Tên Đăng Nhập</label>
+          <input type="text" id="r-username" placeholder="username (không dấu, không cách)">
+        </div>
+        <div class="fg">
+          <label>Email <span style="color:var(--text3);font-weight:400;font-size:11px">(chưa dùng, không bắt buộc)</span></label>
+          <input type="email" id="r-email" placeholder="example@email.com">
+        </div>
+        <div class="fg">
+          <label>Mật Khẩu</label>
+          <input type="password" id="r-password" placeholder="••••••••">
+        </div>
+        <div class="fg">
+          <label>Xác Nhận Mật Khẩu</label>
+          <input type="password" id="r-confirm" placeholder="••••••••" onkeydown="if(event.key==='Enter')doRegister()">
+          <div class="err-msg" id="r-err"></div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="doRegister()">Tạo Tài Khoản</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE: MAIN ═══════════════ -->
+<div class="page" id="page-main">
+  <div class="main-wrap">
+    <div class="main-grid">
+
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <div class="sidebar-card">
+          <h3>Menu</h3>
+          <div class="nav-link active" id="nl-polls" onclick="setView('polls')">
+            <span class="ico">🗳</span> Bình Chọn
+          </div>
+          <div class="nav-link" id="nl-myvotes" onclick="setView('myvotes')">
+            <span class="ico">✅</span> Phiếu Của Tôi
+          </div>
+          <div class="nav-link" id="nl-profile" onclick="setView('profile')">
+            <span class="ico">👤</span> Hồ Sơ
+          </div>
+          <div id="admin-nav-link" style="display:none">
+            <div class="nav-link" id="nl-create" onclick="setView('create')">
+              <span class="ico">⚡</span> Tạo Bình Chọn
+            </div>
+          </div>
+        </div>
+        <div class="sidebar-card">
+          <h3>Thống Kê</h3>
+          <div class="stat-grid">
+            <div class="stat-box"><div class="num" id="stat-total">0</div><div class="lbl">Tổng</div></div>
+            <div class="stat-box"><div class="num" id="stat-live" style="color:var(--green)">0</div><div class="lbl">Đang mở</div></div>
+            <div class="stat-box"><div class="num" id="stat-myvotes" style="color:var(--secondary)">0</div><div class="lbl">Đã vote</div></div>
+            <div class="stat-box"><div class="num" id="stat-ended" style="color:var(--text3)">0</div><div class="lbl">Kết thúc</div></div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- MAIN CONTENT -->
+      <main>
+        <!-- VIEW: POLLS -->
+        <div id="view-polls">
+          <div class="content-header">
+            <h2>Danh Sách Bình Chọn</h2>
+          </div>
+          <div id="polls-list" class="poll-list"></div>
+        </div>
+
+        <!-- VIEW: MY VOTES -->
+        <div id="view-myvotes" style="display:none">
+          <div class="content-header"><h2>Phiếu Của Tôi</h2></div>
+          <div id="myvotes-list" class="poll-list"></div>
+        </div>
+
+        <!-- VIEW: PROFILE -->
+        <div id="view-profile" style="display:none">
+          <div id="profile-content"></div>
+        </div>
+
+        <!-- VIEW: CREATE (Admin only) -->
+        <div id="view-create" style="display:none">
+          <div class="create-panel anim">
+            <div class="create-panel-header">
+              <span style="font-size:20px">⚡</span>
+              <h2>Tạo Cuộc Bình Chọn Mới</h2>
+            </div>
+
+            <div class="fg">
+              <label>Tiêu Đề</label>
+              <input type="text" id="c-title" placeholder="Nhập câu hỏi bình chọn...">
+            </div>
+
+            <div class="panel-divider"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <label style="margin:0;font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text2)">Các Lựa Chọn</label>
+              <button class="btn btn-secondary btn-xs" onclick="addOptionRow()">+ Thêm</button>
+            </div>
+            <div class="opt-builder" id="opt-builder"></div>
+
+            <div class="panel-divider"></div>
+            <div class="grid2">
+              <div class="fg">
+                <label>Thời Gian Kết Thúc</label>
+                <input type="datetime-local" id="c-endtime">
+              </div>
+              <div class="fg">
+                <label>Kiểu Phần Thưởng</label>
+                <select id="c-reward-type">
+                  <option value="none">Không có</option>
+                  <option value="code">Mã Code</option>
+                </select>
+              </div>
+            </div>
+            <div id="reward-code-row" class="fg" style="display:none">
+              <label>Mã Code Phần Thưởng</label>
+              <input type="text" id="c-reward-code" placeholder="VD: NTZ-WIN-2024">
+              <div class="hint">Người dùng nhận được khi cuộc bình chọn kết thúc</div>
+            </div>
+
+            <div class="panel-divider"></div>
+            <div>
+              <div class="toggle-row">
+                <div><div class="toggle-label">Ẩn kết quả trước khi vote</div><div class="toggle-sub">Người dùng phải vote mới thấy số phiếu và %</div></div>
+                <label class="toggle"><input type="checkbox" id="c-hide-before" checked><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+
+            <div style="margin-top:20px">
+              <button class="btn btn-primary" onclick="createPoll()">✦ Tạo Bình Chọn</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+<!-- ═══════════════ MODALS ═══════════════ -->
+
+<!-- Chart Modal -->
+<div class="modal-overlay" id="modal-chart">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="chart-modal-title">Biểu Đồ Kết Quả</h3>
+      <button class="modal-close" onclick="closeModal('modal-chart')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="chart-tabs">
+        <button class="chart-tab active" onclick="switchChart('bar')">📊 Cột</button>
+        <button class="chart-tab" onclick="switchChart('pie')">🥧 Quạt</button>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart-canvas"></canvas>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap" id="chart-legend"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay" id="modal-delete">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header"><h3>Xóa Bình Chọn?</h3><button class="modal-close" onclick="closeModal('modal-delete')">×</button></div>
+    <div class="modal-body">
+      <p style="color:var(--text2);font-size:14px;margin-bottom:20px">Thao tác này không thể hoàn tác. Tất cả dữ liệu sẽ bị xóa vĩnh viễn.</p>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-delete')">Hủy</button>
+        <button class="btn btn-danger" style="flex:1" onclick="confirmDeletePoll()">Xóa</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reward Modal -->
+<div class="modal-overlay" id="modal-reward">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header"><h3>🎉 Phần Thưởng!</h3><button class="modal-close" onclick="closeModal('modal-reward')">×</button></div>
+    <div class="modal-body">
+      <p style="color:var(--text2);font-size:14px;margin-bottom:16px">Cuộc bình chọn đã kết thúc! Cảm ơn bạn đã tham gia. Đây là mã phần thưởng của bạn:</p>
+      <div class="reward-box">
+        <div class="reward-label">✦ Mã Phần Thưởng</div>
+        <div class="reward-code-display">
+          <div class="reward-code" id="modal-reward-code">—</div>
+          <button class="copy-btn" onclick="copyRewardCode()">COPY</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden Message Modal -->
+<div class="modal-overlay" id="modal-hiddenmsg">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header"><h3>💬 Tin Nhắn Ẩn</h3><button class="modal-close" onclick="closeModal('modal-hiddenmsg')">×</button></div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--text2);margin-bottom:10px">Lựa chọn này có tin nhắn ẩn:</p>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:14px;font-size:15px;line-height:1.6" id="hidden-msg-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Stack -->
+<div class="toast-stack" id="toast-stack"></div>
+
+<script>
+// ══════════════════════════════════════════
+// DATA LAYER
+// ══════════════════════════════════════════
+const K_USERS   = 'ntz_users';
+const K_POLLS   = 'ntz_polls';
+const K_VOTES   = 'ntz_uservotes';
+const K_SESSION = 'ntz_session';
+
+function getUsers()   { try{return JSON.parse(localStorage.getItem(K_USERS))||[];}catch{return [];} }
+function getPolls()   { try{return JSON.parse(localStorage.getItem(K_POLLS))||[];}catch{return [];} }
+function getUserVotes(){ try{return JSON.parse(localStorage.getItem(K_VOTES))||{};}catch{return {};} }
+function saveUsers(d) { localStorage.setItem(K_USERS, JSON.stringify(d)); }
+function savePolls(d) { localStorage.setItem(K_POLLS, JSON.stringify(d)); }
+function saveUV(d)    { localStorage.setItem(K_VOTES, JSON.stringify(d)); }
+
+// ─── Seed admin account ───
+(function seedAdmin(){
+  let users = getUsers();
+  if(!users.find(u=>u.username==='atnoob303')){
+    users.push({username:'atnoob303',password:'banbe012@',email:'',role:'admin',createdAt:new Date().toISOString()});
+    saveUsers(users);
+  }
+})();
+
+// ── Session ──
+let currentUser = null;
+try{ currentUser = JSON.parse(localStorage.getItem(K_SESSION)); }catch{}
+// Validate session still exists in users
+if(currentUser){
+  const u = getUsers().find(u=>u.username===currentUser.username);
+  if(!u){ currentUser=null; localStorage.removeItem(K_SESSION); }
+  else{ currentUser=u; }
+}
+
+const isAdmin = ()=> currentUser?.role==='admin';
+
+// ══════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════
+function switchAuthTab(tab){
+  document.getElementById('tab-login').classList.toggle('active',tab==='login');
+  document.getElementById('tab-register').classList.toggle('active',tab==='register');
+  document.getElementById('form-login').style.display = tab==='login'?'':'none';
+  document.getElementById('form-register').style.display = tab==='register'?'':'none';
+}
+
+function doLogin(){
+  const un = document.getElementById('l-username').value.trim();
+  const pw = document.getElementById('l-password').value;
+  const err = document.getElementById('l-err');
+  const u = getUsers().find(u=>u.username===un && u.password===pw);
+  if(!u){ err.classList.add('show'); return; }
+  err.classList.remove('show');
+  currentUser = u;
+  localStorage.setItem(K_SESSION, JSON.stringify(u));
+  onLogin();
+}
+
+function doRegister(){
+  const un = document.getElementById('r-username').value.trim();
+  const em = document.getElementById('r-email').value.trim();
+  const pw = document.getElementById('r-password').value;
+  const cf = document.getElementById('r-confirm').value;
+  const err = document.getElementById('r-err');
+
+  if(!un){ showErr(err,'Vui lòng nhập tên đăng nhập!'); return; }
+  if(!/^[a-zA-Z0-9_]{3,20}$/.test(un)){ showErr(err,'Tên đăng nhập 3-20 ký tự, không dấu, không cách!'); return; }
+  if(pw.length<6){ showErr(err,'Mật khẩu ít nhất 6 ký tự!'); return; }
+  if(pw!==cf){ showErr(err,'Mật khẩu xác nhận không khớp!'); return; }
+
+  const users = getUsers();
+  if(users.find(u=>u.username.toLowerCase()===un.toLowerCase())){ showErr(err,'Tên đăng nhập đã tồn tại!'); return; }
+
+  const newUser = {username:un,password:pw,email:em,role:'user',createdAt:new Date().toISOString()};
+  users.push(newUser);
+  saveUsers(users);
+  currentUser = newUser;
+  localStorage.setItem(K_SESSION, JSON.stringify(newUser));
+  err.classList.remove('show');
+  onLogin();
+}
+
+function showErr(el,msg){ el.textContent=msg; el.classList.add('show'); }
+
+function logout(){
+  currentUser=null;
+  localStorage.removeItem(K_SESSION);
+  showPage('page-auth');
+  renderTopbar();
+}
+
+function onLogin(){
+  showPage('page-main');
+  renderTopbar();
+  setView('polls');
+  renderStats();
+  toast('Chào mừng, '+currentUser.username+'! 👋','t-success');
+}
+
+// ══════════════════════════════════════════
+// TOPBAR
+// ══════════════════════════════════════════
+function renderTopbar(){
+  const el = document.getElementById('topbar-right');
+  if(!currentUser){
+    el.innerHTML='';
+    return;
+  }
+  const isAd = isAdmin();
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="user-pill" onclick="setView('profile')">
+        <div class="avatar ${isAd?'admin-av':''}">${currentUser.username[0].toUpperCase()}</div>
+        <span style="font-size:13px;font-weight:600">${currentUser.username}</span>
+        ${isAd?'<span style="font-size:10px;background:rgba(245,158,11,.15);color:var(--yellow);border:1px solid rgba(245,158,11,.3);border-radius:999px;padding:1px 7px;margin-left:2px">ADMIN</span>':''}
+      </div>
+      <button class="nav-btn" onclick="logout()">Đăng Xuất</button>
+    </div>`;
+}
+
+// ══════════════════════════════════════════
+// PAGE / VIEW ROUTING
+// ══════════════════════════════════════════
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function setView(v){
+  ['polls','myvotes','profile','create'].forEach(n=>{
+    const el=document.getElementById('view-'+n);
+    if(el) el.style.display = n===v?'':'none';
+    const nl=document.getElementById('nl-'+n);
+    if(nl) nl.classList.toggle('active',n===v);
+  });
+  // Admin nav
+  if(isAdmin()) document.getElementById('admin-nav-link').style.display='';
+  else document.getElementById('admin-nav-link').style.display='none';
+
+  if(v==='polls') renderPolls();
+  if(v==='myvotes') renderMyVotes();
+  if(v==='profile') renderProfile();
+  if(v==='create') initCreateForm();
+}
+
+// ══════════════════════════════════════════
+// STATS
+// ══════════════════════════════════════════
+function renderStats(){
+  const polls = getPolls();
+  const now = new Date();
+  const live = polls.filter(p=>new Date(p.endTime)>now).length;
+  const uv = getUserVotes();
+  const myvotes = Object.keys(uv).filter(pid=>uv[pid]?.user===currentUser?.username).length;
+  document.getElementById('stat-total').textContent = polls.length;
+  document.getElementById('stat-live').textContent = live;
+  document.getElementById('stat-ended').textContent = polls.length-live;
+  document.getElementById('stat-myvotes').textContent = myvotes;
+}
+
+// ══════════════════════════════════════════
+// CREATE POLL (Admin)
+// ══════════════════════════════════════════
+function initCreateForm(){
+  const builder = document.getElementById('opt-builder');
+  builder.innerHTML='';
+  addOptionRow(); addOptionRow();
+  const dt = new Date(Date.now()+86400000);
+  document.getElementById('c-endtime').value = dt.toISOString().slice(0,16);
+  document.getElementById('c-title').value='';
+  document.getElementById('c-reward-type').value='none';
+  document.getElementById('c-reward-code').value='';
+  document.getElementById('reward-code-row').style.display='none';
+  document.getElementById('c-hide-before').checked=true;
+  document.getElementById('c-reward-type').onchange=function(){
+    document.getElementById('reward-code-row').style.display=this.value==='code'?'':'none';
+  };
+}
+
+let optCount=0;
+function addOptionRow(){
+  optCount++;
+  const row = document.createElement('div');
+  row.style.marginBottom='10px';
+  row.innerHTML=`
+    <div class="opt-build-row" style="margin-bottom:6px">
+      <input type="text" class="opt-input" placeholder="Lựa chọn ${optCount}">
+      <input type="number" class="opt-fake opt-input" placeholder="Ảo" min="0" value="0" title="Phiếu ảo">
+      <div class="opt-build-controls">
+        <button class="btn btn-secondary btn-xs" title="Bật/tắt" onclick="toggleOptDisabled(this)">🔒</button>
+        <button class="btn btn-danger btn-xs" onclick="removeOptRow(this)">×</button>
+      </div>
+    </div>
+    <input type="text" class="opt-hidden-msg opt-input" placeholder="💬 Tin nhắn ẩn (tùy chọn — hiện khi người dùng chọn)" style="width:100%">
+  `;
+  document.getElementById('opt-builder').appendChild(row);
+}
+
+function removeOptRow(btn){
+  const rows = document.getElementById('opt-builder').children;
+  if(rows.length<=2){ toast('Cần ít nhất 2 lựa chọn!','t-error'); return; }
+  btn.closest('div[style]').remove();
+}
+
+function toggleOptDisabled(btn){
+  const row = btn.closest('.opt-build-row');
+  const inputs = row.querySelectorAll('input');
+  const disabled = inputs[0].disabled;
+  inputs.forEach(i=>i.disabled=!disabled);
+  btn.textContent = disabled?'🔒':'🔓';
+  btn.style.opacity = disabled?'1':'.5';
+}
+
+function createPoll(){
+  const title = document.getElementById('c-title').value.trim();
+  const endTime = document.getElementById('c-endtime').value;
+  const rewardType = document.getElementById('c-reward-type').value;
+  const rewardCode = document.getElementById('c-reward-code').value.trim();
+  const hideBefore = document.getElementById('c-hide-before').checked;
+
+  const builderRows = document.getElementById('opt-builder').children;
+  const options=[];
+  for(const row of builderRows){
+    const inputs = row.querySelectorAll('input');
+    const label = inputs[0].value.trim();
+    if(!label) continue;
+    options.push({
+      id: 'o'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+      label,
+      fakeVotes: parseInt(inputs[1].value)||0,
+      hiddenMsg: inputs[2]?.value.trim()||'',
+      disabled: inputs[0].disabled
+    });
+  }
+
+  if(!title){ toast('Nhập tiêu đề!','t-error'); return; }
+  if(options.length<2){ toast('Cần ít nhất 2 lựa chọn!','t-error'); return; }
+  if(!endTime){ toast('Chọn thời gian kết thúc!','t-error'); return; }
+  if(rewardType==='code'&&!rewardCode){ toast('Nhập mã code phần thưởng!','t-error'); return; }
+
+  const poll = {
+    id:'p'+Date.now(),
+    title,
+    endTime,
+    hideBefore,
+    rewardType,
+    rewardCode: rewardType==='code'?rewardCode:'',
+    createdAt: new Date().toISOString(),
+    createdBy: currentUser.username,
+    options: options.map(o=>({...o,votes:o.fakeVotes}))
+  };
+
+  const polls = getPolls();
+  polls.unshift(poll);
+  savePolls(polls);
+  renderStats();
+  toast('✦ Tạo bình chọn thành công!','t-success');
+  setView('polls');
+}
+
+// ══════════════════════════════════════════
+// RENDER POLLS
+// ══════════════════════════════════════════
+let cdTimers={};
+function renderPolls(){
+  Object.values(cdTimers).forEach(clearInterval); cdTimers={};
+  const polls = getPolls();
+  const container = document.getElementById('polls-list');
+  const uv = getUserVotes();
+  if(!polls.length){
+    container.innerHTML=`<div class="empty"><div class="empty-ico">🗳</div><h3>Chưa có bình chọn nào</h3><p>${isAdmin()?'Tạo bình chọn mới từ menu Admin':'Hãy quay lại sau'}</p></div>`;
+    return;
+  }
+  container.innerHTML='';
+  polls.forEach(poll=>{ container.appendChild(buildPollCard(poll,uv,'polls')); });
+}
+
+function renderMyVotes(){
+  const polls = getPolls();
+  const uv = getUserVotes();
+  const container = document.getElementById('myvotes-list');
+  const voted = polls.filter(p=>uv[p.id]?.user===currentUser?.username);
+  if(!voted.length){
+    container.innerHTML=`<div class="empty"><div class="empty-ico">✅</div><h3>Bạn chưa bình chọn</h3><p>Hãy tham gia các cuộc bình chọn!</p></div>`;
+    return;
+  }
+  container.innerHTML='';
+  voted.forEach(poll=>container.appendChild(buildPollCard(poll,uv,'myvotes')));
+}
+
+function buildPollCard(poll, uv, context){
+  const now = new Date();
+  const ended = new Date(poll.endTime) < now;
+  const myVote = uv[poll.id]?.user===currentUser?.username ? uv[poll.id].optId : null;
+  const totalVotes = poll.options.reduce((s,o)=>s+o.votes,0);
+  const maxVotes = Math.max(...poll.options.map(o=>o.votes));
+  const showStats = !poll.hideBefore || myVote || ended;
+
+  const card = document.createElement('div');
+  card.className='poll-card anim';
+  card.id='pollcard-'+poll.id;
+
+  // Options HTML
+  const optsHTML = poll.options.map(opt=>{
+    const pct = totalVotes>0?Math.round(opt.votes/totalVotes*100):0;
+    const isMy = myVote===opt.id;
+    const isWin = ended && opt.votes===maxVotes && opt.votes>0;
+    const canVote = !ended && !myVote && !opt.disabled;
+    const cls = ['opt-row', opt.disabled?'disabled-opt':'', isMy?'selected':'', isWin?'winner-opt':''].filter(Boolean).join(' ');
+    const clickFn = canVote ? `voteFor('${poll.id}','${opt.id}')` : (opt.hiddenMsg&&isMy?`showHiddenMsg('${poll.id}','${opt.id}')`:'');
+
+    return `<div class="${cls}" onclick="${clickFn}">
+      <div class="opt-bar" style="width:${showStats?pct:0}%"></div>
+      <div class="opt-radio"></div>
+      <div class="opt-label">${esc(opt.label)}${isWin?' 🏆':''}${opt.disabled?' <span style="font-size:11px;color:var(--text3)">(Tắt)</span>':''}</div>
+      ${showStats
+        ? `<div class="opt-stats"><div class="opt-pct">${pct}%</div><div class="opt-cnt">${opt.votes} phiếu</div></div>`
+        : `<div class="hidden-stats"><span class="lock-ico">🔒</span></div>`
+      }
+      ${opt.hiddenMsg&&isMy?`<span title="Có tin nhắn ẩn" style="position:relative;z-index:1;margin-left:4px;cursor:pointer;font-size:14px" onclick="event.stopPropagation();showHiddenMsg('${poll.id}','${opt.id}')">💬</span>`:''}
+    </div>`;
+  }).join('');
+
+  // Actions bar
+  let actionsHTML = `<button class="btn btn-secondary btn-sm" onclick="openChartModal('${poll.id}')">📊 Biểu Đồ</button>`;
+
+  // Reward code button (if voted & ended & has reward)
+  if(myVote && ended && poll.rewardType==='code'){
+    actionsHTML += `<button class="btn btn-sm" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--yellow)" onclick="showReward('${poll.id}')">🎁 Nhận Mã</button>`;
+  }
+
+  if(isAdmin()){
+    actionsHTML += `<button class="btn btn-danger btn-sm" onclick="askDeletePoll('${poll.id}')">🗑 Xóa</button>`;
+  }
+
+  const endDate = new Date(poll.endTime).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const cdId = 'cd-'+poll.id;
+
+  card.innerHTML=`
+    <div class="poll-card-top">
+      <div class="poll-card-header">
+        <div class="poll-card-title">${esc(poll.title)}</div>
+      </div>
+      <div class="poll-card-meta">
+        <span class="badge ${ended?'badge-ended':'badge-live'}">${ended?'⏹ Kết thúc':'● Live'}</span>
+        <span class="badge badge-primary">🗳 ${totalVotes} phiếu</span>
+        ${ended
+          ? `<span class="badge" style="color:var(--text3);border-color:var(--border);background:var(--bg2)">⏰ ${endDate}</span>`
+          : `<span class="badge badge-yellow">⏳ <span class="countdown" id="${cdId}">...</span></span>`
+        }
+        ${poll.rewardType==='code'?`<span class="badge badge-yellow">🎁 Có phần thưởng</span>`:''}
+        ${!showStats&&!ended?`<span class="badge" style="color:var(--text3);border-color:var(--border);background:var(--bg2)">🔒 Vote để xem kết quả</span>`:''}
+      </div>
+      <div class="option-list">${optsHTML}</div>
+    </div>
+    <div class="poll-actions-bar">${actionsHTML}</div>`;
+
+  // Countdown
+  if(!ended){
+    const tick=()=>{
+      const rem = new Date(poll.endTime)-new Date();
+      const el=document.getElementById(cdId);
+      if(!el){clearInterval(cdTimers[poll.id]);return;}
+      if(rem<=0){clearInterval(cdTimers[poll.id]);renderPolls();return;}
+      const d=Math.floor(rem/86400000),h=Math.floor(rem%86400000/3600000),m=Math.floor(rem%3600000/60000),s=Math.floor(rem%60000/1000);
+      el.textContent=d>0?`${d}n ${h}g ${m}p`:h>0?`${h}g ${m}p ${s}s`:`${m}p ${s}s`;
+    };
+    tick();
+    cdTimers[poll.id]=setInterval(tick,1000);
+  }
+
+  return card;
+}
+
+// ══════════════════════════════════════════
+// VOTE
+// ══════════════════════════════════════════
+function voteFor(pollId, optId){
+  if(!currentUser){ toast('Vui lòng đăng nhập!','t-error'); return; }
+  const polls = getPolls();
+  const poll = polls.find(p=>p.id===pollId);
+  if(!poll){ return; }
+  if(new Date(poll.endTime)<new Date()){ toast('Bình chọn đã kết thúc!','t-error'); return; }
+  const uv = getUserVotes();
+  if(uv[pollId]?.user===currentUser.username){ toast('Bạn đã bình chọn!','t-error'); return; }
+
+  const opt = poll.options.find(o=>o.id===optId);
+  if(!opt||opt.disabled){ toast('Lựa chọn này không khả dụng!','t-error'); return; }
+
+  opt.votes++;
+  uv[pollId]={user:currentUser.username, optId, votedAt:new Date().toISOString()};
+  savePolls(polls); saveUV(uv);
+  renderStats();
+
+  // Show hidden message if any
+  if(opt.hiddenMsg){
+    setTimeout(()=>showHiddenMsgDirect(opt.hiddenMsg),300);
+  }
+
+  renderPolls();
+  toast('✓ Phiếu bầu đã được ghi nhận!','t-success');
+}
+
+// ══════════════════════════════════════════
+// HIDDEN MESSAGE
+// ══════════════════════════════════════════
+function showHiddenMsg(pollId, optId){
+  const poll = getPolls().find(p=>p.id===pollId);
+  const opt = poll?.options.find(o=>o.id===optId);
+  if(opt?.hiddenMsg) showHiddenMsgDirect(opt.hiddenMsg);
+}
+
+function showHiddenMsgDirect(msg){
+  document.getElementById('hidden-msg-content').textContent=msg;
+  openModal('modal-hiddenmsg');
+}
+
+// ══════════════════════════════════════════
+// CHARTS
+// ══════════════════════════════════════════
+let chartInstance=null;
+let currentChartPollId=null;
+let currentChartType='bar';
+
+const CHART_COLORS=['#4f8ef7','#a855f7','#22d3ee','#10b981','#f59e0b','#ef4444','#ec4899','#8b5cf6'];
+
+function openChartModal(pollId){
+  currentChartPollId=pollId;
+  currentChartType='bar';
+  document.querySelectorAll('.chart-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
+  const poll=getPolls().find(p=>p.id===pollId);
+  document.getElementById('chart-modal-title').textContent=poll.title;
+  openModal('modal-chart');
+  setTimeout(()=>drawChart('bar'),50);
+}
+
+function switchChart(type){
+  currentChartType=type;
+  document.querySelectorAll('.chart-tab').forEach(t=>t.classList.toggle('active',t.textContent.includes(type==='bar'?'Cột':'Quạt')));
+  drawChart(type);
+}
+
+function drawChart(type){
+  if(chartInstance){ chartInstance.destroy(); chartInstance=null; }
+  const poll=getPolls().find(p=>p.id===currentChartPollId);
+  if(!poll) return;
+  const labels=poll.options.map(o=>o.label);
+  const data=poll.options.map(o=>o.votes);
+  const colors=CHART_COLORS.slice(0,labels.length);
+
+  const ctx=document.getElementById('chart-canvas').getContext('2d');
+  chartInstance=new Chart(ctx,{
+    type:type==='bar'?'bar':'doughnut',
+    data:{
+      labels,
+      datasets:[{
+        data,
+        backgroundColor:colors.map(c=>c+'99'),
+        borderColor:colors,
+        borderWidth:2,
+        borderRadius:type==='bar'?8:0,
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:type!=='bar',labels:{color:'#a0a0c0',font:{family:'JetBrains Mono',size:12}}},
+        tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed.y??ctx.parsed} phiếu`}}
+      },
+      scales: type==='bar'?{
+        x:{ticks:{color:'#a0a0c0',font:{family:'JetBrains Mono',size:11}},grid:{color:'rgba(255,255,255,.05)'}},
+        y:{ticks:{color:'#a0a0c0',font:{family:'JetBrains Mono',size:11}},grid:{color:'rgba(255,255,255,.05)'},beginAtZero:true}
+      }:{}
+    }
+  });
+
+  // Legend
+  const leg=document.getElementById('chart-legend');
+  leg.innerHTML=labels.map((l,i)=>`<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)"><span style="width:10px;height:10px;border-radius:3px;background:${colors[i]};flex-shrink:0;display:inline-block"></span>${esc(l)}: <b style="color:var(--text)">${data[i]}</b></div>`).join('');
+}
+
+// ══════════════════════════════════════════
+// REWARD
+// ══════════════════════════════════════════
+function showReward(pollId){
+  const poll=getPolls().find(p=>p.id===pollId);
+  if(poll?.rewardCode){
+    document.getElementById('modal-reward-code').textContent=poll.rewardCode;
+    openModal('modal-reward');
+  }
+}
+
+function copyRewardCode(){
+  const code=document.getElementById('modal-reward-code').textContent;
+  navigator.clipboard.writeText(code).then(()=>toast('Đã sao chép mã!','t-success')).catch(()=>{
+    const ta=document.createElement('textarea');
+    ta.value=code;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('Đã sao chép mã!','t-success');
+  });
+}
+
+// ══════════════════════════════════════════
+// DELETE POLL
+// ══════════════════════════════════════════
+let deletePollId=null;
+function askDeletePoll(id){ deletePollId=id; openModal('modal-delete'); }
+function confirmDeletePoll(){
+  if(!deletePollId) return;
+  const polls=getPolls().filter(p=>p.id!==deletePollId);
+  savePolls(polls);
+  deletePollId=null;
+  closeModal('modal-delete');
+  renderPolls(); renderStats();
+  toast('Đã xóa bình chọn','t-success');
+}
+
+// ══════════════════════════════════════════
+// PROFILE
+// ══════════════════════════════════════════
+function renderProfile(){
+  if(!currentUser) return;
+  const uv=getUserVotes();
+  const polls=getPolls();
+  const myVotedCount=Object.keys(uv).filter(pid=>uv[pid]?.user===currentUser.username).length;
+  const isAd=isAdmin();
+  const joinDate=new Date(currentUser.createdAt).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  document.getElementById('profile-content').innerHTML=`
+    <div class="profile-header anim">
+      <div class="profile-avatar ${isAd?'admin-av-lg':''}">${currentUser.username[0].toUpperCase()}</div>
+      <div class="profile-info">
+        <h2>${esc(currentUser.username)}</h2>
+        <p>Tham gia: ${joinDate}${currentUser.email?' · '+esc(currentUser.email):''}</p>
+        ${isAd?'<div class="admin-crown">👑 Quản Trị Viên</div>':''}
+      </div>
+    </div>
+    <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+      <div class="stat-box"><div class="num" style="color:var(--secondary)">${myVotedCount}</div><div class="lbl">Đã Vote</div></div>
+      <div class="stat-box"><div class="num">${polls.length}</div><div class="lbl">Tổng Poll</div></div>
+      <div class="stat-box"><div class="num" style="color:var(--green)">${polls.filter(p=>new Date(p.endTime)>new Date()).length}</div><div class="lbl">Đang Mở</div></div>
+    </div>
+    <div class="sidebar-card">
+      <h3>Đổi Mật Khẩu</h3>
+      <div class="fg"><label>Mật Khẩu Hiện Tại</label><input type="password" id="pw-old" placeholder="••••••••"></div>
+      <div class="fg"><label>Mật Khẩu Mới</label><input type="password" id="pw-new" placeholder="••••••••"></div>
+      <div class="fg"><label>Xác Nhận</label><input type="password" id="pw-cf" placeholder="••••••••">
+        <div class="err-msg" id="pw-err"></div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="changePassword()">Lưu Mật Khẩu</button>
+    </div>`;
+}
+
+function changePassword(){
+  const old=document.getElementById('pw-old').value;
+  const nw=document.getElementById('pw-new').value;
+  const cf=document.getElementById('pw-cf').value;
+  const err=document.getElementById('pw-err');
+  if(old!==currentUser.password){showErr(err,'Mật khẩu hiện tại không đúng!');return;}
+  if(nw.length<6){showErr(err,'Mật khẩu mới ít nhất 6 ký tự!');return;}
+  if(nw!==cf){showErr(err,'Mật khẩu xác nhận không khớp!');return;}
+  const users=getUsers();
+  const u=users.find(u=>u.username===currentUser.username);
+  u.password=nw;
+  saveUsers(users);
+  currentUser=u;
+  localStorage.setItem(K_SESSION,JSON.stringify(u));
+  err.classList.remove('show');
+  ['pw-old','pw-new','pw-cf'].forEach(id=>document.getElementById(id).value='');
+  toast('Đổi mật khẩu thành công!','t-success');
+}
+
+// ══════════════════════════════════════════
+// MODAL HELPERS
+// ══════════════════════════════════════════
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+  if(id==='modal-chart'&&chartInstance){ chartInstance.destroy(); chartInstance=null; }
+}
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click',e=>{if(e.target===o)closeModal(o.id);});
+});
+
+// ══════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════
+function toast(msg,type='t-info'){
+  const stack=document.getElementById('toast-stack');
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;
+  t.textContent=msg;
+  stack.appendChild(t);
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ t.classList.add('show'); }); });
+  setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(),400); },2800);
+}
+
+// ══════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+renderTopbar();
+if(currentUser){
+  showPage('page-main');
+  setView('polls');
+  renderStats();
+} else {
+  showPage('page-auth');
+}
+</script>
+</body>
+</html>
