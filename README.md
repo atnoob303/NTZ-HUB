@@ -6,6 +6,36 @@
 <title>NTZ VOTTING HUB</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, set, get, update, remove, onValue, serverTimestamp }
+    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey:            "AIzaSyCQsknbigQD5Cf3WVZigk7_oMh0OIkxrD0",
+    authDomain:        "ntz-votting.firebaseapp.com",
+    databaseURL:       "https://ntz-votting-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId:         "ntz-votting",
+    storageBucket:     "ntz-votting.firebasestorage.app",
+    messagingSenderId: "964776422497",
+    appId:             "1:964776422497:web:c522df70704d1f1ce88e20",
+    measurementId:     "G-VMY412673W"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+  window._db = db;
+  window._ref = ref;
+  window._set = set;
+  window._get = get;
+  window._update = update;
+  window._remove = remove;
+  window._onValue = onValue;
+  window._serverTimestamp = serverTimestamp;
+  window.dispatchEvent(new Event('firebase-ready'));
+</script>
+
 <style>
 :root {
   --bg: #050508;
@@ -36,26 +66,32 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
-
-/* ─── NOISE OVERLAY ─── */
 body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");pointer-events:none;z-index:9999}
 
-/* ─── AURORA BG ─── */
-.aurora{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+/* ── BG IMAGE ── */
+#bg-image-layer{position:fixed;inset:0;z-index:0;background-size:cover;background-position:center;background-repeat:no-repeat;transition:all .5s}
+
+.aurora{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:1}
 .aurora-blob{position:absolute;border-radius:50%;filter:blur(80px);animation:drift 18s ease-in-out infinite}
 .aurora-blob:nth-child(1){width:600px;height:600px;background:radial-gradient(circle,rgba(79,142,247,.08),transparent 70%);top:-200px;left:-100px;animation-delay:0s}
 .aurora-blob:nth-child(2){width:500px;height:500px;background:radial-gradient(circle,rgba(168,85,247,.06),transparent 70%);bottom:-150px;right:-100px;animation-delay:-6s}
 .aurora-blob:nth-child(3){width:400px;height:400px;background:radial-gradient(circle,rgba(34,211,238,.05),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:-12s}
 @keyframes drift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-20px) scale(1.05)}66%{transform:translate(-20px,30px) scale(.95)}}
 
-/* ─── LAYOUT ─── */
-#app{position:relative;z-index:1}
+#app{position:relative;z-index:2}
 
-/* ─── TOPBAR ─── */
+/* ── CONNECTING ── */
+.connecting-overlay{position:fixed;inset:0;background:var(--bg);z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .4s}
+.connecting-overlay.hidden{opacity:0;pointer-events:none}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── TOPBAR ── */
 .topbar{background:rgba(12,12,20,.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;padding:0 24px}
 .topbar-inner{max-width:1200px;margin:0 auto;height:62px;display:flex;align-items:center;justify-content:space-between;gap:16px}
-.logo-mark{display:flex;align-items:center;gap:10px;text-decoration:none}
-.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;letter-spacing:-1px;flex-shrink:0}
+.logo-mark{display:flex;align-items:center;gap:10px;text-decoration:none;cursor:pointer}
+.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;letter-spacing:-1px;flex-shrink:0;overflow:hidden}
+.logo-icon img{width:100%;height:100%;object-fit:cover}
 .logo-text{font-weight:800;font-size:15px;letter-spacing:.5px}
 .logo-text span{color:var(--primary)}
 .logo-badge{font-size:9px;font-family:'JetBrains Mono',monospace;background:linear-gradient(90deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:600;letter-spacing:1px}
@@ -64,25 +100,36 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .user-pill:hover{border-color:var(--border2)}
 .avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
 .avatar.admin-av{background:linear-gradient(135deg,#f59e0b,#ef4444)}
+.avatar.anon-av{background:linear-gradient(135deg,#606080,#303048)}
 .nav-btn{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;white-space:nowrap}
 .nav-btn:hover{border-color:var(--primary);color:var(--primary)}
 .nav-btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
-.nav-btn.primary:hover{background:#3a7be8;box-shadow:0 0 20px rgba(79,142,247,.3)}
+.nav-btn.primary:hover{background:#3a7be8}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse-dot 1.5s ease-in-out infinite;flex-shrink:0}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
 
-/* ─── PAGE WRAPPER ─── */
+/* ── PAGE ── */
 .page{display:none;min-height:calc(100vh - 62px)}
 .page.active{display:block}
 
-/* ─── AUTH PAGES ─── */
+/* ── LANDING (anonymous entry) ── */
+.landing-wrap{min-height:calc(100vh - 62px);display:flex;align-items:center;justify-content:center;padding:32px 16px}
+.landing-box{width:100%;max-width:460px;text-align:center}
+.landing-icon{width:80px;height:80px;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 20px;box-shadow:0 0 40px rgba(79,142,247,.3)}
+.landing-box h1{font-size:28px;font-weight:800;margin-bottom:8px}
+.landing-box p{font-size:14px;color:var(--text2);margin-bottom:32px;line-height:1.6}
+.landing-btns{display:flex;flex-direction:column;gap:10px;max-width:280px;margin:0 auto}
+.landing-or{font-size:12px;color:var(--text3);margin:4px 0;text-align:center}
+.anon-badge{display:inline-flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border);border-radius:999px;padding:4px 12px;font-size:11px;color:var(--text3);margin-top:12px}
+
+/* ── AUTH ── */
 .auth-wrap{min-height:calc(100vh - 62px);display:flex;align-items:center;justify-content:center;padding:32px 16px}
 .auth-box{width:100%;max-width:420px;background:var(--bg1);border:1px solid var(--border);border-radius:var(--r2);padding:36px;box-shadow:var(--shadow-lg)}
-.auth-box h2{font-size:22px;font-weight:700;margin-bottom:4px}
-.auth-box .sub{font-size:14px;color:var(--text2);margin-bottom:28px}
-.auth-tabs{display:flex;gap:0;background:var(--bg2);border-radius:8px;padding:3px;margin-bottom:24px;border:1px solid var(--border)}
+.auth-tabs{display:flex;background:var(--bg2);border-radius:8px;padding:3px;margin-bottom:24px;border:1px solid var(--border)}
 .auth-tab{flex:1;padding:8px;border-radius:6px;border:none;background:transparent;color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;text-align:center}
 .auth-tab.active{background:var(--bg1);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.3)}
 
-/* ─── FORM ─── */
+/* ── FORM ── */
 .fg{margin-bottom:16px}
 .fg label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase}
 .fg input,.fg textarea,.fg select{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;outline:none;transition:border-color .2s}
@@ -99,67 +146,88 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .btn-secondary:hover{border-color:var(--border2);color:var(--text)}
 .btn-danger{background:var(--red-dim);border:1px solid rgba(239,68,68,.3);color:var(--red)}
 .btn-danger:hover{background:var(--red);color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text3)}
+.btn-ghost:hover{border-color:var(--border2);color:var(--text2)}
 .btn-sm{padding:7px 12px;font-size:12px;border-radius:7px}
 .btn-xs{padding:5px 9px;font-size:11px;border-radius:6px}
 
-/* ─── MAIN LAYOUT ─── */
+/* ── LAYOUT ── */
 .main-wrap{max-width:1200px;margin:0 auto;padding:28px 20px}
-.main-grid{display:grid;grid-template-columns:280px 1fr;gap:24px;align-items:start}
+.main-grid{display:grid;grid-template-columns:260px 1fr;gap:24px;align-items:start}
 @media(max-width:900px){.main-grid{grid-template-columns:1fr}}
 
-/* ─── SIDEBAR ─── */
-.sidebar{}
-.sidebar-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:16px}
-.sidebar-card h3{font-size:13px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text2);margin-bottom:14px}
+/* ── SIDEBAR ── */
+.sidebar-card{background:rgba(12,12,20,.8);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:16px}
+.sidebar-card h3{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin-bottom:14px}
 .nav-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;transition:all .2s;font-size:14px;color:var(--text2);border:1px solid transparent}
 .nav-link:hover{background:var(--bg2);color:var(--text)}
 .nav-link.active{background:var(--primary-dim);color:var(--primary);border-color:rgba(79,142,247,.2)}
 .nav-link .ico{font-size:15px;width:20px;text-align:center}
-.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.stat-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
-.stat-box .num{font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--primary)}
-.stat-box .lbl{font-size:11px;color:var(--text3);margin-top:2px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
+.stat-box .num{font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--primary)}
+.stat-box .lbl{font-size:10px;color:var(--text3);margin-top:2px}
 
-/* ─── CONTENT ─── */
+/* ── CONTENT ── */
 .content-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap}
 .content-header h2{font-size:20px;font-weight:700}
-.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600;border:1px solid}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600;border:1px solid}
 .badge-live{color:var(--green);border-color:rgba(16,185,129,.3);background:var(--green-dim)}
 .badge-ended{color:var(--text3);border-color:var(--border);background:var(--bg2)}
 .badge-primary{color:var(--primary);border-color:rgba(79,142,247,.3);background:var(--primary-dim)}
 .badge-yellow{color:var(--yellow);border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.08)}
 .badge-purple{color:var(--secondary);border-color:rgba(168,85,247,.3);background:var(--secondary-dim)}
+.badge-gray{color:var(--text3);border-color:var(--border);background:var(--bg2)}
 
-/* ─── POLL CARD ─── */
+/* ── POLL CARD ── */
 .poll-list{display:flex;flex-direction:column;gap:16px}
-.poll-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;transition:border-color .2s}
+.poll-card{background:rgba(12,12,20,.85);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;transition:border-color .2s}
 .poll-card:hover{border-color:var(--border2)}
 .poll-card-top{padding:20px 20px 16px}
-.poll-card-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px}
-.poll-card-title{flex:1;font-size:17px;font-weight:700;line-height:1.35}
+.poll-card-title{font-size:17px;font-weight:700;line-height:1.35;margin-bottom:10px}
 .poll-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-.poll-actions-bar{display:flex;gap:8px;flex-wrap:wrap;padding:14px 20px;background:var(--bg);border-top:1px solid var(--border)}
+.poll-actions-bar{display:flex;gap:8px;flex-wrap:wrap;padding:12px 20px;background:rgba(5,5,8,.6);border-top:1px solid var(--border)}
 
-/* ─── OPTION ROW ─── */
-.option-list{display:flex;flex-direction:column;gap:8px}
-.opt-row{position:relative;display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .2s;overflow:hidden}
-.opt-row.disabled-opt{opacity:.45;cursor:not-allowed}
-.opt-row:not(.disabled-opt):hover{border-color:var(--primary)}
+/* ── OPTION ROW ── */
+.option-list{display:flex;flex-direction:column;gap:7px}
+.opt-row{position:relative;display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .25s;overflow:hidden;user-select:none}
+.opt-row.can-vote:hover{border-color:var(--primary);background:rgba(79,142,247,.05)}
 .opt-row.selected{border-color:var(--primary);background:var(--primary-dim)}
-.opt-row.winner-opt{border-color:rgba(16,185,129,.4)}
-.opt-bar{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,rgba(79,142,247,.12),transparent);transition:width .7s cubic-bezier(.16,1,.3,1);pointer-events:none}
-.opt-row.winner-opt .opt-bar{background:linear-gradient(90deg,rgba(16,185,129,.12),transparent)}
-.opt-radio{width:17px;height:17px;border-radius:50%;border:2px solid var(--border2);flex-shrink:0;position:relative;z-index:1;transition:.2s}
+.opt-row.winner-opt{border-color:rgba(16,185,129,.5);background:var(--green-dim)}
+.opt-row.disabled-opt{opacity:.4;cursor:not-allowed}
+.opt-row.anon-locked{cursor:default}
+.opt-bar{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,rgba(79,142,247,.1),transparent);transition:width .8s cubic-bezier(.16,1,.3,1);pointer-events:none}
+.opt-row.winner-opt .opt-bar{background:linear-gradient(90deg,rgba(16,185,129,.1),transparent)}
+.opt-row.selected .opt-bar{background:linear-gradient(90deg,rgba(79,142,247,.15),transparent)}
+.opt-radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--border2);flex-shrink:0;position:relative;z-index:1;transition:.2s}
 .opt-row.selected .opt-radio{border-color:var(--primary)}
 .opt-row.selected .opt-radio::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--primary)}
-.opt-label{flex:1;font-size:14px;position:relative;z-index:1}
-.opt-stats{text-align:right;position:relative;z-index:1;min-width:56px}
-.opt-pct{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600}
-.opt-cnt{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace}
-.hidden-stats{display:flex;align-items:center;justify-content:flex-end;min-width:56px}
-.lock-ico{font-size:14px;opacity:.3}
+.opt-row.winner-opt .opt-radio{border-color:var(--green)}
+.opt-label{flex:1;font-size:14px;position:relative;z-index:1;line-height:1.4}
+.opt-stats{text-align:right;position:relative;z-index:1;min-width:58px}
+.opt-pct{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600}
+.opt-cnt{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+.hidden-stats .lock-ico{font-size:13px;opacity:.25}
+/* change vote hint */
+.change-hint{font-size:10px;color:var(--primary);opacity:.7;margin-top:2px}
 
-/* ─── CHART MODAL ─── */
+/* ── CREATE POLL — redesigned ── */
+.create-wrap{max-width:700px}
+.create-section{background:rgba(12,12,20,.85);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--r2);padding:24px;margin-bottom:16px}
+.create-section-title{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.create-section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.opt-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;transition:border-color .2s}
+.opt-card:hover{border-color:var(--border2)}
+.opt-card-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.opt-card-num{width:22px;height:22px;border-radius:6px;background:var(--primary-dim);border:1px solid rgba(79,142,247,.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--primary);flex-shrink:0}
+.opt-card-header input{flex:1;background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:4px 0;font-size:14px;font-weight:600;color:var(--text)}
+.opt-card-header input:focus{outline:none;border-color:var(--primary)}
+.opt-card-body{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt-card-body .fg{margin-bottom:0}
+.opt-card-reward{grid-column:1/-1}
+.opt-card-actions{display:flex;justify-content:flex-end;margin-top:10px;gap:6px}
+
+/* ── MODAL ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .25s}
 .modal-overlay.open{opacity:1;pointer-events:all}
 .modal{background:var(--bg1);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);transform:scale(.96) translateY(8px);transition:transform .25s}
@@ -172,10 +240,9 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .chart-tabs{display:flex;gap:8px;margin-bottom:20px}
 .chart-tab{padding:7px 16px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;transition:.2s}
 .chart-tab.active{background:var(--primary-dim);border-color:rgba(79,142,247,.4);color:var(--primary)}
-.chart-wrap{position:relative;height:300px;display:flex;align-items:center;justify-content:center}
-canvas{max-width:100%!important}
+.chart-wrap{position:relative;height:300px}
 
-/* ─── REWARD CODE ─── */
+/* ── REWARD ── */
 .reward-box{background:var(--bg);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:16px;margin-top:14px}
 .reward-label{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--yellow);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
 .reward-code-display{display:flex;align-items:center;gap:10px}
@@ -183,170 +250,162 @@ canvas{max-width:100%!important}
 .copy-btn{padding:7px 13px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:7px;color:var(--yellow);font-size:12px;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:.2s}
 .copy-btn:hover{background:var(--yellow);color:#000}
 
-/* ─── ADMIN CREATE PANEL ─── */
-.create-panel{background:var(--bg1);border:1px solid rgba(79,142,247,.2);border-radius:var(--r2);padding:24px;margin-bottom:24px}
-.create-panel-header{display:flex;align-items:center;gap:10px;margin-bottom:20px}
-.create-panel-header h2{font-size:17px;font-weight:700}
-.panel-divider{height:1px;background:var(--border);margin:18px 0}
-.opt-builder{display:flex;flex-direction:column;gap:8px}
-.opt-build-row{display:flex;align-items:center;gap:8px}
-.opt-build-row input{flex:1}
-.opt-fake{width:90px;flex-shrink:0}
-.opt-hidden-msg{width:100%}
-.opt-build-controls{display:flex;gap:6px;flex-shrink:0}
+/* ── ADMIN SETTINGS ── */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:640px){.settings-grid{grid-template-columns:1fr}}
+.color-preview{width:36px;height:36px;border-radius:8px;flex-shrink:0;border:2px solid var(--border)}
+.color-row{display:flex;align-items:center;gap:10px}
+.color-row input[type=color]{width:0;height:0;opacity:0;position:absolute}
+.slider-row{display:flex;align-items:center;gap:12px}
+.slider-row input[type=range]{flex:1;accent-color:var(--primary)}
+.slider-val{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text2);min-width:36px;text-align:right}
+.bg-preview{width:100%;height:100px;border-radius:10px;border:1px solid var(--border);overflow:hidden;margin-top:8px;position:relative;background-size:cover;background-position:center}
+.bg-preview-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,.4)}
+
+/* ── PROFILE ── */
+.profile-header{background:linear-gradient(135deg,var(--bg2),var(--bg1));border:1px solid var(--border);border-radius:var(--r2);padding:28px;margin-bottom:20px;display:flex;align-items:center;gap:20px}
+.profile-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex-shrink:0}
+.profile-avatar.admin-av-lg{background:linear-gradient(135deg,#f59e0b,#ef4444)}
+.admin-crown{display:inline-flex;align-items:center;gap:5px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:999px;padding:3px 10px;font-size:11px;color:var(--yellow);font-weight:600;margin-top:6px}
+
+/* ── TOGGLE ── */
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
 .toggle-row:last-child{border-bottom:none;padding-bottom:0}
-.toggle-label{font-size:14px}
-.toggle-sub{font-size:12px;color:var(--text3);margin-top:1px}
 .toggle{position:relative;width:40px;height:22px;flex-shrink:0}
 .toggle input{opacity:0;width:0;height:0}
 .toggle-slider{position:absolute;inset:0;background:var(--bg3);border-radius:999px;cursor:pointer;transition:.25s;border:1px solid var(--border)}
 .toggle-slider::before{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:var(--text3);left:2px;top:2px;transition:.25s}
 .toggle input:checked+.toggle-slider{background:var(--primary);border-color:var(--primary)}
 .toggle input:checked+.toggle-slider::before{transform:translateX(18px);background:#fff}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:600px){.grid2{grid-template-columns:1fr}}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-@media(max-width:600px){.grid3{grid-template-columns:1fr}}
 
-/* ─── EMPTY STATE ─── */
+/* ── EMPTY ── */
 .empty{text-align:center;padding:60px 20px}
 .empty-ico{font-size:48px;opacity:.2;margin-bottom:14px}
 .empty h3{font-size:17px;font-weight:600;color:var(--text2);margin-bottom:6px}
 .empty p{font-size:14px;color:var(--text3)}
 
-/* ─── COUNTDOWN ─── */
-.countdown{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500}
-
-/* ─── TOAST ─── */
+/* ── TOAST ── */
 .toast-stack{position:fixed;bottom:20px;right:20px;z-index:9000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-.toast{padding:11px 16px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;font-size:13px;max-width:300px;box-shadow:var(--shadow);transform:translateX(120%);transition:transform .3s cubic-bezier(.16,1,.3,1);pointer-events:none}
+.toast{padding:11px 16px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;font-size:13px;max-width:300px;box-shadow:var(--shadow);transform:translateX(120%);transition:transform .3s cubic-bezier(.16,1,.3,1)}
 .toast.show{transform:translateX(0)}
 .toast.t-success{border-color:rgba(16,185,129,.4);color:var(--green)}
 .toast.t-error{border-color:rgba(239,68,68,.4);color:var(--red)}
 .toast.t-info{border-color:rgba(79,142,247,.4);color:var(--primary)}
 
-/* ─── PROFILE ─── */
-.profile-header{background:linear-gradient(135deg,var(--bg2),var(--bg1));border:1px solid var(--border);border-radius:var(--r2);padding:28px;margin-bottom:20px;display:flex;align-items:center;gap:20px}
-.profile-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex-shrink:0}
-.profile-avatar.admin-av-lg{background:linear-gradient(135deg,#f59e0b,#ef4444)}
-.profile-info h2{font-size:20px;font-weight:700}
-.profile-info p{font-size:14px;color:var(--text2);margin-top:3px}
-.admin-crown{display:inline-flex;align-items:center;gap:5px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:999px;padding:3px 10px;font-size:11px;color:var(--yellow);font-weight:600;margin-top:6px}
-
-/* ─── SCROLLBAR ─── */
+/* ── MISC ── */
+.countdown{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500}
+.divider{height:1px;background:var(--border);margin:16px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.grid2{grid-template-columns:1fr}}
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-
-/* ─── ANIMATIONS ─── */
 @keyframes fadein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .anim{animation:fadein .3s ease-out both}
+@media(max-width:640px){.topbar{padding:0 14px}.main-wrap{padding:14px}.poll-card-top{padding:14px}}
 
-/* ─── RESPONSIVE ─── */
-@media(max-width:640px){
-  .topbar{padding:0 14px}
-  .main-wrap{padding:16px}
-  .poll-card-top{padding:16px}
-  .create-panel{padding:16px}
-  .auth-box{padding:24px 20px}
-}
+/* ── VOTE CHANGE BUTTON ── */
+.unvote-btn{padding:4px 10px;background:rgba(79,142,247,.08);border:1px solid rgba(79,142,247,.2);border-radius:6px;color:var(--primary);font-size:11px;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:.2s;flex-shrink:0;position:relative;z-index:2}
+.unvote-btn:hover{background:rgba(79,142,247,.2)}
 </style>
 </head>
 <body>
+
+<div class="connecting-overlay" id="connecting-overlay">
+  <div class="spinner"></div>
+  <p style="font-size:14px;color:var(--text2)">Đang kết nối...</p>
+</div>
+
+<div id="bg-image-layer"></div>
 <div class="aurora"><div class="aurora-blob"></div><div class="aurora-blob"></div><div class="aurora-blob"></div></div>
+
 <div id="app">
 
-<!-- ═══════════════ TOPBAR ═══════════════ -->
+<!-- ═══ TOPBAR ═══ -->
 <nav class="topbar">
   <div class="topbar-inner">
-    <a class="logo-mark" href="#">
-      <div class="logo-icon">NV</div>
+    <div class="logo-mark" onclick="goHome()">
+      <div class="logo-icon" id="logo-icon-el">NV</div>
       <div>
-        <div class="logo-text">NTZ <span>VOTTING</span> HUB</div>
-        <div class="logo-badge">UPDATE ✦ v2.0</div>
+        <div class="logo-text" id="logo-text-el">NTZ <span>VOTTING</span> HUB</div>
+        <div class="logo-badge" id="logo-badge-el">FIREBASE ✦ v4.0</div>
       </div>
-    </a>
-    <div class="topbar-right" id="topbar-right">
-      <!-- injected by JS -->
     </div>
+    <div class="topbar-right" id="topbar-right"></div>
   </div>
 </nav>
 
-<!-- ═══════════════ PAGE: AUTH ═══════════════ -->
-<div class="page active" id="page-auth">
+<!-- ═══ PAGE: LANDING ═══ -->
+<div class="page active" id="page-landing">
+  <div class="landing-wrap">
+    <div class="landing-box anim">
+      <div class="landing-icon" id="landing-icon">🗳</div>
+      <h1 id="landing-title">NTZ VOTTING HUB</h1>
+      <p>Nền tảng bình chọn real-time. Xem kết quả cập nhật theo thời gian thực từ mọi người.</p>
+      <div class="landing-btns">
+        <button class="btn btn-primary" onclick="showPage('page-auth');switchAuthTab('login')">🔑 Đăng Nhập</button>
+        <div class="landing-or">hoặc</div>
+        <button class="btn btn-secondary" onclick="enterAnonymous()">👻 Tiếp tục ẩn danh</button>
+      </div>
+      <div class="anon-badge">👻 Ẩn danh: chỉ xem, không vote được</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PAGE: AUTH ═══ -->
+<div class="page" id="page-auth">
   <div class="auth-wrap">
     <div class="auth-box anim">
       <div class="auth-tabs">
         <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Đăng Nhập</button>
         <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Tạo Tài Khoản</button>
       </div>
-
-      <!-- LOGIN FORM -->
       <div id="form-login">
-        <div class="fg">
-          <label>Tên Đăng Nhập</label>
-          <input type="text" id="l-username" placeholder="username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
-        </div>
-        <div class="fg">
-          <label>Mật Khẩu</label>
+        <div class="fg"><label>Tên Đăng Nhập</label>
+          <input type="text" id="l-username" placeholder="username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()"></div>
+        <div class="fg"><label>Mật Khẩu</label>
           <input type="password" id="l-password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
-          <div class="err-msg" id="l-err">Tên đăng nhập hoặc mật khẩu không đúng!</div>
-        </div>
+          <div class="err-msg" id="l-err">Tên đăng nhập hoặc mật khẩu không đúng!</div></div>
         <button class="btn btn-primary btn-full" onclick="doLogin()">Đăng Nhập</button>
+        <div style="text-align:center;margin-top:14px">
+          <button class="btn btn-ghost btn-sm" onclick="enterAnonymous()">👻 Vào ẩn danh thay thế</button>
+        </div>
       </div>
-
-      <!-- REGISTER FORM -->
       <div id="form-register" style="display:none">
-        <div class="fg">
-          <label>Tên Đăng Nhập</label>
-          <input type="text" id="r-username" placeholder="username (không dấu, không cách)">
-        </div>
-        <div class="fg">
-          <label>Email <span style="color:var(--text3);font-weight:400;font-size:11px">(chưa dùng, không bắt buộc)</span></label>
-          <input type="email" id="r-email" placeholder="example@email.com">
-        </div>
-        <div class="fg">
-          <label>Mật Khẩu</label>
-          <input type="password" id="r-password" placeholder="••••••••">
-        </div>
-        <div class="fg">
-          <label>Xác Nhận Mật Khẩu</label>
+        <div class="fg"><label>Tên Đăng Nhập</label>
+          <input type="text" id="r-username" placeholder="username (không dấu, không cách)"></div>
+        <div class="fg"><label>Email <span style="color:var(--text3);font-weight:400;font-size:11px">(không bắt buộc)</span></label>
+          <input type="email" id="r-email" placeholder="example@email.com"></div>
+        <div class="fg"><label>Mật Khẩu</label>
+          <input type="password" id="r-password" placeholder="••••••••"></div>
+        <div class="fg"><label>Xác Nhận Mật Khẩu</label>
           <input type="password" id="r-confirm" placeholder="••••••••" onkeydown="if(event.key==='Enter')doRegister()">
-          <div class="err-msg" id="r-err"></div>
-        </div>
+          <div class="err-msg" id="r-err"></div></div>
         <button class="btn btn-primary btn-full" onclick="doRegister()">Tạo Tài Khoản</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════ PAGE: MAIN ═══════════════ -->
+<!-- ═══ PAGE: MAIN ═══ -->
 <div class="page" id="page-main">
   <div class="main-wrap">
     <div class="main-grid">
 
       <!-- SIDEBAR -->
-      <aside class="sidebar">
+      <aside>
         <div class="sidebar-card">
           <h3>Menu</h3>
-          <div class="nav-link active" id="nl-polls" onclick="setView('polls')">
-            <span class="ico">🗳</span> Bình Chọn
-          </div>
-          <div class="nav-link" id="nl-myvotes" onclick="setView('myvotes')">
-            <span class="ico">✅</span> Phiếu Của Tôi
-          </div>
-          <div class="nav-link" id="nl-profile" onclick="setView('profile')">
-            <span class="ico">👤</span> Hồ Sơ
-          </div>
-          <div id="admin-nav-link" style="display:none">
-            <div class="nav-link" id="nl-create" onclick="setView('create')">
-              <span class="ico">⚡</span> Tạo Bình Chọn
-            </div>
+          <div class="nav-link active" id="nl-polls" onclick="setView('polls')"><span class="ico">🗳</span> Bình Chọn</div>
+          <div class="nav-link" id="nl-myvotes" onclick="setView('myvotes')" id="nl-myvotes-wrap"><span class="ico">✅</span> Phiếu Của Tôi</div>
+          <div class="nav-link" id="nl-profile" onclick="setView('profile')"><span class="ico">👤</span> Hồ Sơ</div>
+          <div id="admin-nav" style="display:none">
+            <div class="nav-link" id="nl-create" onclick="setView('create')"><span class="ico">⚡</span> Tạo Bình Chọn</div>
+            <div class="nav-link" id="nl-settings" onclick="setView('settings')"><span class="ico">⚙️</span> Cài Đặt App</div>
           </div>
         </div>
         <div class="sidebar-card">
-          <h3>Thống Kê</h3>
+          <h3 style="display:flex;align-items:center;gap:6px">Thống Kê <div class="live-dot"></div></h3>
           <div class="stat-grid">
             <div class="stat-box"><div class="num" id="stat-total">0</div><div class="lbl">Tổng</div></div>
             <div class="stat-box"><div class="num" id="stat-live" style="color:var(--green)">0</div><div class="lbl">Đang mở</div></div>
@@ -358,111 +417,98 @@ canvas{max-width:100%!important}
 
       <!-- MAIN CONTENT -->
       <main>
-        <!-- VIEW: POLLS -->
+        <!-- POLLS -->
         <div id="view-polls">
           <div class="content-header">
             <h2>Danh Sách Bình Chọn</h2>
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--green)"><div class="live-dot"></div>Real-time</div>
           </div>
           <div id="polls-list" class="poll-list"></div>
         </div>
 
-        <!-- VIEW: MY VOTES -->
+        <!-- MY VOTES -->
         <div id="view-myvotes" style="display:none">
           <div class="content-header"><h2>Phiếu Của Tôi</h2></div>
           <div id="myvotes-list" class="poll-list"></div>
         </div>
 
-        <!-- VIEW: PROFILE -->
+        <!-- PROFILE -->
         <div id="view-profile" style="display:none">
           <div id="profile-content"></div>
         </div>
 
-        <!-- VIEW: CREATE (Admin only) -->
+        <!-- CREATE -->
         <div id="view-create" style="display:none">
-          <div class="create-panel anim">
-            <div class="create-panel-header">
-              <span style="font-size:20px">⚡</span>
-              <h2>Tạo Cuộc Bình Chọn Mới</h2>
-            </div>
+          <div class="content-header"><h2>Tạo Cuộc Bình Chọn</h2></div>
+          <div class="create-wrap">
 
-            <div class="fg">
-              <label>Tiêu Đề</label>
-              <input type="text" id="c-title" placeholder="Nhập câu hỏi bình chọn...">
-            </div>
-
-            <div class="panel-divider"></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <label style="margin:0;font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text2)">Các Lựa Chọn</label>
-              <button class="btn btn-secondary btn-xs" onclick="addOptionRow()">+ Thêm</button>
-            </div>
-            <div class="opt-builder" id="opt-builder"></div>
-
-            <div class="panel-divider"></div>
-            <div class="grid2">
-              <div class="fg">
-                <label>Thời Gian Kết Thúc</label>
-                <input type="datetime-local" id="c-endtime">
-              </div>
-              <div class="fg">
-                <label>Kiểu Phần Thưởng</label>
-                <select id="c-reward-type">
-                  <option value="none">Không có</option>
-                  <option value="code">Mã Code</option>
-                </select>
+            <div class="create-section anim">
+              <div class="create-section-title">📋 Thông tin cơ bản</div>
+              <div class="fg"><label>Tiêu Đề Câu Hỏi</label>
+                <input type="text" id="c-title" placeholder="Nhập câu hỏi bình chọn..."></div>
+              <div class="grid2">
+                <div class="fg"><label>Thời Gian Kết Thúc</label>
+                  <input type="datetime-local" id="c-endtime"></div>
+                <div class="fg"><label>Hiển Thị Kết Quả</label>
+                  <select id="c-hide-before">
+                    <option value="1">Ẩn cho đến khi vote</option>
+                    <option value="0">Hiện luôn</option>
+                  </select>
+                </div>
               </div>
             </div>
-            <div id="reward-code-row" class="fg" style="display:none">
-              <label>Mã Code Phần Thưởng</label>
-              <input type="text" id="c-reward-code" placeholder="VD: NTZ-WIN-2024">
-              <div class="hint">Người dùng nhận được khi cuộc bình chọn kết thúc</div>
+
+            <div class="create-section">
+              <div class="create-section-title">🎯 Các lựa chọn
+                <button class="btn btn-secondary btn-xs" style="margin-left:auto" onclick="addOptCard()">+ Thêm lựa chọn</button>
+              </div>
+              <div id="opt-cards"></div>
             </div>
 
-            <div class="panel-divider"></div>
-            <div>
+            <div class="create-section">
+              <div class="create-section-title">⚙️ Tùy chọn nâng cao</div>
               <div class="toggle-row">
-                <div><div class="toggle-label">Ẩn kết quả trước khi vote</div><div class="toggle-sub">Người dùng phải vote mới thấy số phiếu và %</div></div>
-                <label class="toggle"><input type="checkbox" id="c-hide-before" checked><span class="toggle-slider"></span></label>
+                <div><div style="font-size:14px">Cho phép đổi phiếu</div><div style="font-size:12px;color:var(--text3);margin-top:2px">Người dùng có thể chọn lại khi poll còn live</div></div>
+                <label class="toggle"><input type="checkbox" id="c-allow-change" checked><span class="toggle-slider"></span></label>
               </div>
             </div>
 
-            <div style="margin-top:20px">
-              <button class="btn btn-primary" onclick="createPoll()">✦ Tạo Bình Chọn</button>
-            </div>
+            <button class="btn btn-primary" style="width:100%;padding:14px" onclick="createPoll()">✦ Tạo Bình Chọn</button>
           </div>
+        </div>
+
+        <!-- SETTINGS (Admin) -->
+        <div id="view-settings" style="display:none">
+          <div class="content-header"><h2>⚙️ Cài Đặt App</h2></div>
+          <div id="settings-content"></div>
         </div>
       </main>
     </div>
   </div>
 </div>
+</div>
 
-</div><!-- #app -->
+<!-- ═══ MODALS ═══ -->
 
-<!-- ═══════════════ MODALS ═══════════════ -->
-
-<!-- Chart Modal -->
+<!-- Chart -->
 <div class="modal-overlay" id="modal-chart">
   <div class="modal">
-    <div class="modal-header">
-      <h3 id="chart-modal-title">Biểu Đồ Kết Quả</h3>
-      <button class="modal-close" onclick="closeModal('modal-chart')">×</button>
-    </div>
+    <div class="modal-header"><h3 id="chart-modal-title">Biểu Đồ Kết Quả</h3><button class="modal-close" onclick="closeModal('modal-chart')">×</button></div>
     <div class="modal-body">
       <div class="chart-tabs">
         <button class="chart-tab active" onclick="switchChart('bar')">📊 Cột</button>
         <button class="chart-tab" onclick="switchChart('pie')">🥧 Quạt</button>
       </div>
-      <div class="chart-wrap">
-        <canvas id="chart-canvas"></canvas>
-      </div>
+      <div class="chart-wrap"><canvas id="chart-canvas"></canvas></div>
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap" id="chart-legend"></div>
     </div>
   </div>
 </div>
 
-<!-- Delete Confirm Modal -->
+<!-- Delete Confirm -->
 <div class="modal-overlay" id="modal-delete">
   <div class="modal" style="max-width:380px">
-    <div class="modal-header"><h3>Xóa Bình Chọn?</h3><button class="modal-close" onclick="closeModal('modal-delete')">×</button></div>
+    <div class="modal-header"><h3>🗑 Xóa Bình Chọn?</h3><button class="modal-close" onclick="closeModal('modal-delete')">×</button></div>
     <div class="modal-body">
       <p style="color:var(--text2);font-size:14px;margin-bottom:20px">Thao tác này không thể hoàn tác. Tất cả dữ liệu sẽ bị xóa vĩnh viễn.</p>
       <div style="display:flex;gap:10px">
@@ -473,12 +519,13 @@ canvas{max-width:100%!important}
   </div>
 </div>
 
-<!-- Reward Modal -->
+<!-- Reward -->
 <div class="modal-overlay" id="modal-reward">
-  <div class="modal" style="max-width:420px">
+  <div class="modal" style="max-width:440px">
     <div class="modal-header"><h3>🎉 Phần Thưởng!</h3><button class="modal-close" onclick="closeModal('modal-reward')">×</button></div>
     <div class="modal-body">
-      <p style="color:var(--text2);font-size:14px;margin-bottom:16px">Cuộc bình chọn đã kết thúc! Cảm ơn bạn đã tham gia. Đây là mã phần thưởng của bạn:</p>
+      <p style="color:var(--text2);font-size:14px;margin-bottom:16px">Cuộc bình chọn đã kết thúc! Đây là mã phần thưởng cho lựa chọn của bạn:</p>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:8px">Lựa chọn: <b id="modal-reward-option" style="color:var(--text)">—</b></div>
       <div class="reward-box">
         <div class="reward-label">✦ Mã Phần Thưởng</div>
         <div class="reward-code-display">
@@ -490,7 +537,7 @@ canvas{max-width:100%!important}
   </div>
 </div>
 
-<!-- Hidden Message Modal -->
+<!-- Hidden Message -->
 <div class="modal-overlay" id="modal-hiddenmsg">
   <div class="modal" style="max-width:400px">
     <div class="modal-header"><h3>💬 Tin Nhắn Ẩn</h3><button class="modal-close" onclick="closeModal('modal-hiddenmsg')">×</button></div>
@@ -501,553 +548,733 @@ canvas{max-width:100%!important}
   </div>
 </div>
 
-<!-- Toast Stack -->
+<!-- Login Required (for anonymous) -->
+<div class="modal-overlay" id="modal-login-req">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header"><h3>🔑 Cần đăng nhập</h3><button class="modal-close" onclick="closeModal('modal-login-req')">×</button></div>
+    <div class="modal-body">
+      <p style="color:var(--text2);font-size:14px;margin-bottom:20px">Bạn cần đăng nhập để tham gia bình chọn.</p>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-secondary" style="flex:1" onclick="closeModal('modal-login-req')">Để sau</button>
+        <button class="btn btn-primary" style="flex:1" onclick="closeModal('modal-login-req');showPage('page-auth');switchAuthTab('login')">Đăng Nhập</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast-stack" id="toast-stack"></div>
 
 <script>
-// ══════════════════════════════════════════
-// DATA LAYER
-// ══════════════════════════════════════════
-const K_USERS   = 'ntz_users';
-const K_POLLS   = 'ntz_polls';
-const K_VOTES   = 'ntz_uservotes';
-const K_SESSION = 'ntz_session';
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+const K_SESSION  = 'ntz_session_v4';
+const K_ANON     = 'ntz_anon';
 
-function getUsers()   { try{return JSON.parse(localStorage.getItem(K_USERS))||[];}catch{return [];} }
-function getPolls()   { try{return JSON.parse(localStorage.getItem(K_POLLS))||[];}catch{return [];} }
-function getUserVotes(){ try{return JSON.parse(localStorage.getItem(K_VOTES))||{};}catch{return {};} }
-function saveUsers(d) { localStorage.setItem(K_USERS, JSON.stringify(d)); }
-function savePolls(d) { localStorage.setItem(K_POLLS, JSON.stringify(d)); }
-function saveUV(d)    { localStorage.setItem(K_VOTES, JSON.stringify(d)); }
+let currentUser  = null;    // null = not logged in
+let isAnon       = false;   // anonymous mode
+let allPolls     = {};
+let myVotes      = {};      // { pollId: optId } — only for logged in users
+let appSettings  = {};
+let unsubPolls   = null;
+let unsubVotes   = null;
+let unsubSettings = null;
 
-// ─── Seed admin account ───
-(function seedAdmin(){
-  let users = getUsers();
-  if(!users.find(u=>u.username==='atnoob303')){
-    users.push({username:'atnoob303',password:'banbe012@',email:'',role:'admin',createdAt:new Date().toISOString()});
-    saveUsers(users);
+const isAdmin    = () => currentUser?.role === 'admin';
+const isLoggedIn = () => !!currentUser;
+
+// ══════════════════════════════════════════════════════
+// FIREBASE READY
+// ══════════════════════════════════════════════════════
+window.addEventListener('firebase-ready', async () => {
+  await seedAdmin();
+  await loadAppSettings();
+
+  // Restore session
+  try { currentUser = JSON.parse(localStorage.getItem(K_SESSION)); } catch {}
+  if (currentUser) {
+    const snap = await window._get(window._ref(window._db, `users/${currentUser.username}`));
+    if (!snap.exists()) { currentUser = null; localStorage.removeItem(K_SESSION); }
+    else currentUser = snap.val();
   }
-})();
 
-// ── Session ──
-let currentUser = null;
-try{ currentUser = JSON.parse(localStorage.getItem(K_SESSION)); }catch{}
-// Validate session still exists in users
-if(currentUser){
-  const u = getUsers().find(u=>u.username===currentUser.username);
-  if(!u){ currentUser=null; localStorage.removeItem(K_SESSION); }
-  else{ currentUser=u; }
+  isAnon = !!localStorage.getItem(K_ANON);
+
+  document.getElementById('connecting-overlay').classList.add('hidden');
+  applyAppSettings();
+  renderTopbar();
+
+  if (currentUser) {
+    showPage('page-main');
+    startListeners();
+    setView('polls');
+  } else if (isAnon) {
+    showPage('page-main');
+    startListeners();
+    setView('polls');
+  } else {
+    showPage('page-landing');
+  }
+});
+
+// ══════════════════════════════════════════════════════
+// SEED ADMIN
+// ══════════════════════════════════════════════════════
+async function seedAdmin() {
+  const snap = await window._get(window._ref(window._db, 'users/atnoob303'));
+  if (!snap.exists()) {
+    await window._set(window._ref(window._db, 'users/atnoob303'), {
+      username: 'atnoob303', password: 'banbe012@',
+      email: '', role: 'admin', createdAt: new Date().toISOString()
+    });
+  }
 }
 
-const isAdmin = ()=> currentUser?.role==='admin';
+// ══════════════════════════════════════════════════════
+// APP SETTINGS
+// ══════════════════════════════════════════════════════
+const DEFAULT_SETTINGS = {
+  appName: 'NTZ VOTTING HUB',
+  appVersion: 'v4.0',
+  appUpdate: 'FIREBASE',
+  logoUrl: '',
+  primaryColor: '#4f8ef7',
+  bgImageUrl: '',
+  bgBlur: 0,
+  bgOpacity: 0.05,
+};
 
-// ══════════════════════════════════════════
+async function loadAppSettings() {
+  const snap = await window._get(window._ref(window._db, 'appSettings'));
+  appSettings = snap.exists() ? { ...DEFAULT_SETTINGS, ...snap.val() } : { ...DEFAULT_SETTINGS };
+}
+
+function applyAppSettings() {
+  const s = appSettings;
+  // CSS primary color
+  document.documentElement.style.setProperty('--primary', s.primaryColor || '#4f8ef7');
+  // Rebuild primary-dim from primary
+  const hex = s.primaryColor || '#4f8ef7';
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  document.documentElement.style.setProperty('--primary-dim', `rgba(${r},${g},${b},0.15)`);
+
+  // Logo
+  const logoEl = document.getElementById('logo-icon-el');
+  if (logoEl) {
+    if (s.logoUrl) {
+      logoEl.innerHTML = `<img src="${esc(s.logoUrl)}" alt="logo" onerror="this.parentElement.textContent='NV'">`;
+    } else {
+      logoEl.textContent = 'NV';
+    }
+  }
+  // App name
+  const nameEl = document.getElementById('logo-text-el');
+  if (nameEl && s.appName) {
+    const parts = s.appName.split(' ');
+    if (parts.length >= 2) {
+      nameEl.innerHTML = `${esc(parts[0])} <span>${esc(parts.slice(1).join(' '))}</span>`;
+    } else {
+      nameEl.innerHTML = `<span>${esc(s.appName)}</span>`;
+    }
+  }
+  // Badge
+  const badgeEl = document.getElementById('logo-badge-el');
+  if (badgeEl) badgeEl.textContent = `${s.appUpdate || 'UPDATE'} ✦ ${s.appVersion || 'v4.0'}`;
+  // Page title
+  document.title = s.appName || 'NTZ VOTTING HUB';
+  // Landing title
+  const lt = document.getElementById('landing-title');
+  if (lt) lt.textContent = s.appName || 'NTZ VOTTING HUB';
+
+  // BG Image
+  const bgLayer = document.getElementById('bg-image-layer');
+  if (bgLayer) {
+    if (s.bgImageUrl) {
+      bgLayer.style.backgroundImage = `url("${s.bgImageUrl}")`;
+      bgLayer.style.filter = `blur(${s.bgBlur || 0}px)`;
+      bgLayer.style.opacity = s.bgOpacity ?? 0.05;
+    } else {
+      bgLayer.style.backgroundImage = '';
+      bgLayer.style.opacity = 0;
+    }
+  }
+}
+
+async function saveAppSettings() {
+  await window._set(window._ref(window._db, 'appSettings'), appSettings);
+  applyAppSettings();
+}
+
+// ══════════════════════════════════════════════════════
+// LISTENERS
+// ══════════════════════════════════════════════════════
+function startListeners() {
+  // Polls
+  if (unsubPolls) unsubPolls();
+  unsubPolls = window._onValue(window._ref(window._db, 'polls'), snap => {
+    allPolls = snap.val() || {};
+    const v = getCurrentView();
+    if (v === 'polls')   renderPolls();
+    if (v === 'myvotes') renderMyVotes();
+    renderStats();
+    if (currentChartPollId && document.getElementById('modal-chart').classList.contains('open')) drawChart(currentChartType);
+  });
+
+  // Settings live
+  if (unsubSettings) unsubSettings();
+  unsubSettings = window._onValue(window._ref(window._db, 'appSettings'), snap => {
+    appSettings = { ...DEFAULT_SETTINGS, ...(snap.val() || {}) };
+    applyAppSettings();
+  });
+
+  // Votes (only logged in)
+  if (currentUser) {
+    if (unsubVotes) unsubVotes();
+    unsubVotes = window._onValue(window._ref(window._db, `votes/${currentUser.username}`), snap => {
+      myVotes = snap.val() || {};
+      const v = getCurrentView();
+      if (v === 'polls')   renderPolls();
+      if (v === 'myvotes') renderMyVotes();
+      renderStats();
+    });
+  }
+}
+
+function stopListeners() {
+  [unsubPolls, unsubVotes, unsubSettings].forEach(u => u && u());
+  unsubPolls = unsubVotes = unsubSettings = null;
+}
+
+function getCurrentView() {
+  for (const v of ['polls','myvotes','profile','create','settings']) {
+    const el = document.getElementById('view-'+v);
+    if (el && el.style.display !== 'none') return v;
+  }
+  return 'polls';
+}
+
+// ══════════════════════════════════════════════════════
+// ANONYMOUS
+// ══════════════════════════════════════════════════════
+function enterAnonymous() {
+  isAnon = true;
+  localStorage.setItem(K_ANON, '1');
+  showPage('page-main');
+  renderTopbar();
+  startListeners();
+  setView('polls');
+  toast('👻 Đang xem ẩn danh — đăng nhập để vote', 't-info');
+}
+
+// ══════════════════════════════════════════════════════
 // AUTH
-// ══════════════════════════════════════════
-function switchAuthTab(tab){
-  document.getElementById('tab-login').classList.toggle('active',tab==='login');
-  document.getElementById('tab-register').classList.toggle('active',tab==='register');
-  document.getElementById('form-login').style.display = tab==='login'?'':'none';
-  document.getElementById('form-register').style.display = tab==='register'?'':'none';
+// ══════════════════════════════════════════════════════
+function switchAuthTab(tab) {
+  document.getElementById('tab-login').classList.toggle('active', tab==='login');
+  document.getElementById('tab-register').classList.toggle('active', tab==='register');
+  document.getElementById('form-login').style.display    = tab==='login' ? '' : 'none';
+  document.getElementById('form-register').style.display = tab==='register' ? '' : 'none';
 }
 
-function doLogin(){
+async function doLogin() {
   const un = document.getElementById('l-username').value.trim();
   const pw = document.getElementById('l-password').value;
   const err = document.getElementById('l-err');
-  const u = getUsers().find(u=>u.username===un && u.password===pw);
-  if(!u){ err.classList.add('show'); return; }
-  err.classList.remove('show');
-  currentUser = u;
-  localStorage.setItem(K_SESSION, JSON.stringify(u));
-  onLogin();
+  try {
+    const snap = await window._get(window._ref(window._db, `users/${un}`));
+    if (!snap.exists() || snap.val().password !== pw) { err.classList.add('show'); return; }
+    err.classList.remove('show');
+    currentUser = snap.val();
+    isAnon = false;
+    localStorage.setItem(K_SESSION, JSON.stringify(currentUser));
+    localStorage.removeItem(K_ANON);
+    onLogin();
+  } catch { toast('Lỗi kết nối Firebase!', 't-error'); }
 }
 
-function doRegister(){
+async function doRegister() {
   const un = document.getElementById('r-username').value.trim();
   const em = document.getElementById('r-email').value.trim();
   const pw = document.getElementById('r-password').value;
   const cf = document.getElementById('r-confirm').value;
   const err = document.getElementById('r-err');
-
-  if(!un){ showErr(err,'Vui lòng nhập tên đăng nhập!'); return; }
-  if(!/^[a-zA-Z0-9_]{3,20}$/.test(un)){ showErr(err,'Tên đăng nhập 3-20 ký tự, không dấu, không cách!'); return; }
-  if(pw.length<6){ showErr(err,'Mật khẩu ít nhất 6 ký tự!'); return; }
-  if(pw!==cf){ showErr(err,'Mật khẩu xác nhận không khớp!'); return; }
-
-  const users = getUsers();
-  if(users.find(u=>u.username.toLowerCase()===un.toLowerCase())){ showErr(err,'Tên đăng nhập đã tồn tại!'); return; }
-
-  const newUser = {username:un,password:pw,email:em,role:'user',createdAt:new Date().toISOString()};
-  users.push(newUser);
-  saveUsers(users);
-  currentUser = newUser;
-  localStorage.setItem(K_SESSION, JSON.stringify(newUser));
-  err.classList.remove('show');
-  onLogin();
+  if (!un)                               { showErr(err,'Vui lòng nhập tên đăng nhập!'); return; }
+  if (!/^[a-zA-Z0-9_]{3,20}$/.test(un)) { showErr(err,'Tên đăng nhập 3-20 ký tự, không dấu, không cách!'); return; }
+  if (pw.length < 6)                     { showErr(err,'Mật khẩu ít nhất 6 ký tự!'); return; }
+  if (pw !== cf)                         { showErr(err,'Mật khẩu xác nhận không khớp!'); return; }
+  try {
+    const snap = await window._get(window._ref(window._db, `users/${un}`));
+    if (snap.exists()) { showErr(err,'Tên đăng nhập đã tồn tại!'); return; }
+    const newUser = { username:un, password:pw, email:em, role:'user', createdAt:new Date().toISOString() };
+    await window._set(window._ref(window._db, `users/${un}`), newUser);
+    currentUser = newUser; isAnon = false;
+    localStorage.setItem(K_SESSION, JSON.stringify(newUser));
+    localStorage.removeItem(K_ANON);
+    err.classList.remove('show');
+    onLogin();
+  } catch { toast('Lỗi kết nối Firebase!', 't-error'); }
 }
 
-function showErr(el,msg){ el.textContent=msg; el.classList.add('show'); }
+function showErr(el, msg) { el.textContent = msg; el.classList.add('show'); }
 
-function logout(){
-  currentUser=null;
+function logout() {
+  stopListeners();
+  currentUser = null; isAnon = false; myVotes = {}; allPolls = {};
   localStorage.removeItem(K_SESSION);
-  showPage('page-auth');
+  localStorage.removeItem(K_ANON);
+  showPage('page-landing');
   renderTopbar();
 }
 
-function onLogin(){
+function onLogin() {
   showPage('page-main');
   renderTopbar();
+  startListeners();
   setView('polls');
-  renderStats();
-  toast('Chào mừng, '+currentUser.username+'! 👋','t-success');
+  toast('Chào mừng, ' + currentUser.username + '! 👋', 't-success');
 }
 
-// ══════════════════════════════════════════
+function goHome() {
+  if (currentUser || isAnon) setView('polls');
+  else showPage('page-landing');
+}
+
+// ══════════════════════════════════════════════════════
 // TOPBAR
-// ══════════════════════════════════════════
-function renderTopbar(){
+// ══════════════════════════════════════════════════════
+function renderTopbar() {
   const el = document.getElementById('topbar-right');
-  if(!currentUser){
-    el.innerHTML='';
+  if (!currentUser && !isAnon) { el.innerHTML=''; return; }
+  if (isAnon) {
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:8px">
+      <div class="user-pill">
+        <div class="avatar anon-av">?</div>
+        <span style="font-size:13px;color:var(--text3)">Ẩn danh</span>
+      </div>
+      <button class="nav-btn primary" onclick="showPage('page-auth');switchAuthTab('login')">Đăng Nhập</button>
+      <button class="nav-btn" onclick="logout()">Thoát</button>
+    </div>`;
     return;
   }
   const isAd = isAdmin();
-  el.innerHTML=`
-    <div style="display:flex;align-items:center;gap:8px">
-      <div class="user-pill" onclick="setView('profile')">
-        <div class="avatar ${isAd?'admin-av':''}">${currentUser.username[0].toUpperCase()}</div>
-        <span style="font-size:13px;font-weight:600">${currentUser.username}</span>
-        ${isAd?'<span style="font-size:10px;background:rgba(245,158,11,.15);color:var(--yellow);border:1px solid rgba(245,158,11,.3);border-radius:999px;padding:1px 7px;margin-left:2px">ADMIN</span>':''}
-      </div>
-      <button class="nav-btn" onclick="logout()">Đăng Xuất</button>
-    </div>`;
+  el.innerHTML = `<div style="display:flex;align-items:center;gap:8px">
+    <div class="user-pill" onclick="setView('profile')">
+      <div class="avatar ${isAd?'admin-av':''}">${currentUser.username[0].toUpperCase()}</div>
+      <span style="font-size:13px;font-weight:600">${esc(currentUser.username)}</span>
+      ${isAd?'<span style="font-size:10px;background:rgba(245,158,11,.15);color:var(--yellow);border:1px solid rgba(245,158,11,.3);border-radius:999px;padding:1px 7px;margin-left:2px">ADMIN</span>':''}
+    </div>
+    <button class="nav-btn" onclick="logout()">Đăng Xuất</button>
+  </div>`;
 }
 
-// ══════════════════════════════════════════
-// PAGE / VIEW ROUTING
-// ══════════════════════════════════════════
-function showPage(id){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+// ══════════════════════════════════════════════════════
+// PAGE / VIEW
+// ══════════════════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
 
-function setView(v){
-  ['polls','myvotes','profile','create'].forEach(n=>{
-    const el=document.getElementById('view-'+n);
-    if(el) el.style.display = n===v?'':'none';
-    const nl=document.getElementById('nl-'+n);
-    if(nl) nl.classList.toggle('active',n===v);
+function setView(v) {
+  ['polls','myvotes','profile','create','settings'].forEach(n => {
+    const el = document.getElementById('view-'+n);
+    if (el) el.style.display = n===v ? '' : 'none';
+    const nl = document.getElementById('nl-'+n);
+    if (nl) nl.classList.toggle('active', n===v);
   });
-  // Admin nav
-  if(isAdmin()) document.getElementById('admin-nav-link').style.display='';
-  else document.getElementById('admin-nav-link').style.display='none';
+  if (isAdmin()) document.getElementById('admin-nav').style.display = '';
+  else document.getElementById('admin-nav').style.display = 'none';
 
-  if(v==='polls') renderPolls();
-  if(v==='myvotes') renderMyVotes();
-  if(v==='profile') renderProfile();
-  if(v==='create') initCreateForm();
+  // Hide myvotes for anon
+  const mvEl = document.getElementById('nl-myvotes');
+  if (mvEl) mvEl.style.display = isAnon ? 'none' : '';
+
+  if (v==='polls')    renderPolls();
+  if (v==='myvotes')  renderMyVotes();
+  if (v==='profile')  renderProfile();
+  if (v==='create')   initCreateForm();
+  if (v==='settings') renderSettings();
 }
 
-// ══════════════════════════════════════════
+// ══════════════════════════════════════════════════════
 // STATS
-// ══════════════════════════════════════════
-function renderStats(){
-  const polls = getPolls();
+// ══════════════════════════════════════════════════════
+function renderStats() {
+  const polls = Object.values(allPolls);
   const now = new Date();
-  const live = polls.filter(p=>new Date(p.endTime)>now).length;
-  const uv = getUserVotes();
-  const myvotes = Object.keys(uv).filter(pid=>uv[pid]?.user===currentUser?.username).length;
-  document.getElementById('stat-total').textContent = polls.length;
-  document.getElementById('stat-live').textContent = live;
-  document.getElementById('stat-ended').textContent = polls.length-live;
-  document.getElementById('stat-myvotes').textContent = myvotes;
+  document.getElementById('stat-total').textContent   = polls.length;
+  document.getElementById('stat-live').textContent    = polls.filter(p=>new Date(p.endTime)>now).length;
+  document.getElementById('stat-ended').textContent   = polls.filter(p=>new Date(p.endTime)<=now).length;
+  document.getElementById('stat-myvotes').textContent = Object.keys(myVotes).length;
 }
 
-// ══════════════════════════════════════════
-// CREATE POLL (Admin)
-// ══════════════════════════════════════════
-function initCreateForm(){
-  const builder = document.getElementById('opt-builder');
-  builder.innerHTML='';
-  addOptionRow(); addOptionRow();
-  const dt = new Date(Date.now()+86400000);
+// ══════════════════════════════════════════════════════
+// CREATE POLL
+// ══════════════════════════════════════════════════════
+let optCardCount = 0;
+function initCreateForm() {
+  document.getElementById('opt-cards').innerHTML = '';
+  optCardCount = 0;
+  addOptCard(); addOptCard();
+  const dt = new Date(Date.now() + 86400000);
   document.getElementById('c-endtime').value = dt.toISOString().slice(0,16);
-  document.getElementById('c-title').value='';
-  document.getElementById('c-reward-type').value='none';
-  document.getElementById('c-reward-code').value='';
-  document.getElementById('reward-code-row').style.display='none';
-  document.getElementById('c-hide-before').checked=true;
-  document.getElementById('c-reward-type').onchange=function(){
-    document.getElementById('reward-code-row').style.display=this.value==='code'?'':'none';
-  };
+  document.getElementById('c-title').value = '';
+  document.getElementById('c-hide-before').value = '1';
+  document.getElementById('c-allow-change').checked = true;
 }
 
-let optCount=0;
-function addOptionRow(){
-  optCount++;
-  const row = document.createElement('div');
-  row.style.marginBottom='10px';
-  row.innerHTML=`
-    <div class="opt-build-row" style="margin-bottom:6px">
-      <input type="text" class="opt-input" placeholder="Lựa chọn ${optCount}">
-      <input type="number" class="opt-fake opt-input" placeholder="Ảo" min="0" value="0" title="Phiếu ảo">
-      <div class="opt-build-controls">
-        <button class="btn btn-secondary btn-xs" title="Bật/tắt" onclick="toggleOptDisabled(this)">🔒</button>
-        <button class="btn btn-danger btn-xs" onclick="removeOptRow(this)">×</button>
-      </div>
+function addOptCard() {
+  optCardCount++;
+  const id = optCardCount;
+  const div = document.createElement('div');
+  div.className = 'opt-card anim';
+  div.id = `opt-card-${id}`;
+  div.innerHTML = `
+    <div class="opt-card-header">
+      <div class="opt-card-num">${id}</div>
+      <input type="text" placeholder="Nhập lựa chọn ${id}..." id="opt-label-${id}">
     </div>
-    <input type="text" class="opt-hidden-msg opt-input" placeholder="💬 Tin nhắn ẩn (tùy chọn — hiện khi người dùng chọn)" style="width:100%">
-  `;
-  document.getElementById('opt-builder').appendChild(row);
+    <div class="opt-card-body">
+      <div class="fg"><label>Phiếu Ảo</label>
+        <input type="number" id="opt-fake-${id}" value="0" min="0" placeholder="0"></div>
+      <div class="fg"><label>Mã Thưởng <span style="color:var(--text3);font-size:10px;text-transform:none;font-weight:400">(hiện khi poll kết thúc)</span></label>
+        <input type="text" id="opt-reward-${id}" placeholder="VD: NTZ-WIN-${id}"></div>
+      <div class="fg opt-card-reward"><label>Tin Nhắn Ẩn <span style="color:var(--text3);font-size:10px;text-transform:none;font-weight:400">(hiện sau khi chọn)</span></label>
+        <input type="text" id="opt-msg-${id}" placeholder="Tin nhắn bí mật cho người chọn lựa chọn này..."></div>
+    </div>
+    <div class="opt-card-actions">
+      <button class="btn btn-danger btn-xs" onclick="removeOptCard(${id})">× Xóa</button>
+    </div>`;
+  document.getElementById('opt-cards').appendChild(div);
 }
 
-function removeOptRow(btn){
-  const rows = document.getElementById('opt-builder').children;
-  if(rows.length<=2){ toast('Cần ít nhất 2 lựa chọn!','t-error'); return; }
-  btn.closest('div[style]').remove();
+function removeOptCard(id) {
+  const cards = document.getElementById('opt-cards').children;
+  if (cards.length <= 2) { toast('Cần ít nhất 2 lựa chọn!', 't-error'); return; }
+  document.getElementById(`opt-card-${id}`)?.remove();
 }
 
-function toggleOptDisabled(btn){
-  const row = btn.closest('.opt-build-row');
-  const inputs = row.querySelectorAll('input');
-  const disabled = inputs[0].disabled;
-  inputs.forEach(i=>i.disabled=!disabled);
-  btn.textContent = disabled?'🔒':'🔓';
-  btn.style.opacity = disabled?'1':'.5';
-}
+async function createPoll() {
+  const title      = document.getElementById('c-title').value.trim();
+  const endTime    = document.getElementById('c-endtime').value;
+  const hideBefore = document.getElementById('c-hide-before').value === '1';
+  const allowChange= document.getElementById('c-allow-change').checked;
 
-function createPoll(){
-  const title = document.getElementById('c-title').value.trim();
-  const endTime = document.getElementById('c-endtime').value;
-  const rewardType = document.getElementById('c-reward-type').value;
-  const rewardCode = document.getElementById('c-reward-code').value.trim();
-  const hideBefore = document.getElementById('c-hide-before').checked;
-
-  const builderRows = document.getElementById('opt-builder').children;
-  const options=[];
-  for(const row of builderRows){
-    const inputs = row.querySelectorAll('input');
-    const label = inputs[0].value.trim();
-    if(!label) continue;
+  const cards = document.getElementById('opt-cards').querySelectorAll('.opt-card');
+  const options = [];
+  cards.forEach(card => {
+    const idMatch = card.id.match(/opt-card-(\d+)/);
+    if (!idMatch) return;
+    const n = idMatch[1];
+    const label = document.getElementById(`opt-label-${n}`)?.value.trim();
+    if (!label) return;
     options.push({
-      id: 'o'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+      id:         'o' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
       label,
-      fakeVotes: parseInt(inputs[1].value)||0,
-      hiddenMsg: inputs[2]?.value.trim()||'',
-      disabled: inputs[0].disabled
+      votes:      parseInt(document.getElementById(`opt-fake-${n}`)?.value)||0,
+      rewardCode: document.getElementById(`opt-reward-${n}`)?.value.trim()||'',
+      hiddenMsg:  document.getElementById(`opt-msg-${n}`)?.value.trim()||'',
     });
-  }
+  });
 
-  if(!title){ toast('Nhập tiêu đề!','t-error'); return; }
-  if(options.length<2){ toast('Cần ít nhất 2 lựa chọn!','t-error'); return; }
-  if(!endTime){ toast('Chọn thời gian kết thúc!','t-error'); return; }
-  if(rewardType==='code'&&!rewardCode){ toast('Nhập mã code phần thưởng!','t-error'); return; }
+  if (!title)           { toast('Nhập tiêu đề!', 't-error'); return; }
+  if (options.length<2) { toast('Cần ít nhất 2 lựa chọn!', 't-error'); return; }
+  if (!endTime)         { toast('Chọn thời gian kết thúc!', 't-error'); return; }
 
-  const poll = {
-    id:'p'+Date.now(),
-    title,
-    endTime,
-    hideBefore,
-    rewardType,
-    rewardCode: rewardType==='code'?rewardCode:'',
-    createdAt: new Date().toISOString(),
-    createdBy: currentUser.username,
-    options: options.map(o=>({...o,votes:o.fakeVotes}))
-  };
-
-  const polls = getPolls();
-  polls.unshift(poll);
-  savePolls(polls);
-  renderStats();
-  toast('✦ Tạo bình chọn thành công!','t-success');
-  setView('polls');
+  const pollId = 'p' + Date.now();
+  try {
+    await window._set(window._ref(window._db, `polls/${pollId}`), {
+      id: pollId, title, endTime, hideBefore, allowChange,
+      createdAt: new Date().toISOString(), createdBy: currentUser.username, options
+    });
+    toast('✦ Tạo bình chọn thành công!', 't-success');
+    setView('polls');
+  } catch { toast('Lỗi khi tạo!', 't-error'); }
 }
 
-// ══════════════════════════════════════════
+// ══════════════════════════════════════════════════════
 // RENDER POLLS
-// ══════════════════════════════════════════
-let cdTimers={};
-function renderPolls(){
-  Object.values(cdTimers).forEach(clearInterval); cdTimers={};
-  const polls = getPolls();
+// ══════════════════════════════════════════════════════
+let cdTimers = {};
+
+function renderPolls() {
+  Object.values(cdTimers).forEach(clearInterval); cdTimers = {};
+  const polls = Object.values(allPolls).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   const container = document.getElementById('polls-list');
-  const uv = getUserVotes();
-  if(!polls.length){
-    container.innerHTML=`<div class="empty"><div class="empty-ico">🗳</div><h3>Chưa có bình chọn nào</h3><p>${isAdmin()?'Tạo bình chọn mới từ menu Admin':'Hãy quay lại sau'}</p></div>`;
+  if (!polls.length) {
+    container.innerHTML = `<div class="empty"><div class="empty-ico">🗳</div><h3>Chưa có bình chọn nào</h3><p>${isAdmin()?'Tạo bình chọn mới từ menu Admin':'Hãy quay lại sau'}</p></div>`;
     return;
   }
-  container.innerHTML='';
-  polls.forEach(poll=>{ container.appendChild(buildPollCard(poll,uv,'polls')); });
+  container.innerHTML = '';
+  polls.forEach(p => container.appendChild(buildPollCard(p)));
 }
 
-function renderMyVotes(){
-  const polls = getPolls();
-  const uv = getUserVotes();
+function renderMyVotes() {
+  const polls = Object.values(allPolls)
+    .filter(p => myVotes[p.id])
+    .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   const container = document.getElementById('myvotes-list');
-  const voted = polls.filter(p=>uv[p.id]?.user===currentUser?.username);
-  if(!voted.length){
-    container.innerHTML=`<div class="empty"><div class="empty-ico">✅</div><h3>Bạn chưa bình chọn</h3><p>Hãy tham gia các cuộc bình chọn!</p></div>`;
+  if (!polls.length) {
+    container.innerHTML = `<div class="empty"><div class="empty-ico">✅</div><h3>Bạn chưa bình chọn</h3><p>Hãy tham gia các cuộc bình chọn!</p></div>`;
     return;
   }
-  container.innerHTML='';
-  voted.forEach(poll=>container.appendChild(buildPollCard(poll,uv,'myvotes')));
+  container.innerHTML = '';
+  polls.forEach(p => container.appendChild(buildPollCard(p)));
 }
 
-function buildPollCard(poll, uv, context){
-  const now = new Date();
-  const ended = new Date(poll.endTime) < now;
-  const myVote = uv[poll.id]?.user===currentUser?.username ? uv[poll.id].optId : null;
-  const totalVotes = poll.options.reduce((s,o)=>s+o.votes,0);
-  const maxVotes = Math.max(...poll.options.map(o=>o.votes));
-  const showStats = !poll.hideBefore || myVote || ended;
+function buildPollCard(poll) {
+  const now        = new Date();
+  const ended      = new Date(poll.endTime) < now;
+  const myVoteId   = isLoggedIn() ? (myVotes[poll.id] || null) : null;
+  const opts       = Array.isArray(poll.options) ? poll.options : Object.values(poll.options||{});
+  const total      = opts.reduce((s,o)=>s+(o.votes||0),0);
+  const maxVotes   = Math.max(...opts.map(o=>o.votes||0));
+  const showStats  = !poll.hideBefore || myVoteId || ended || isAnon;
+  const canChange  = poll.allowChange && !ended && isLoggedIn() && myVoteId;
 
   const card = document.createElement('div');
-  card.className='poll-card anim';
-  card.id='pollcard-'+poll.id;
+  card.className = 'poll-card anim';
+  card.id = 'pollcard-' + poll.id;
 
-  // Options HTML
-  const optsHTML = poll.options.map(opt=>{
-    const pct = totalVotes>0?Math.round(opt.votes/totalVotes*100):0;
-    const isMy = myVote===opt.id;
-    const isWin = ended && opt.votes===maxVotes && opt.votes>0;
-    const canVote = !ended && !myVote && !opt.disabled;
-    const cls = ['opt-row', opt.disabled?'disabled-opt':'', isMy?'selected':'', isWin?'winner-opt':''].filter(Boolean).join(' ');
-    const clickFn = canVote ? `voteFor('${poll.id}','${opt.id}')` : (opt.hiddenMsg&&isMy?`showHiddenMsg('${poll.id}','${opt.id}')`:'');
+  const optsHTML = opts.map(opt => {
+    const pct   = total>0 ? Math.round((opt.votes||0)/total*100) : 0;
+    const isMy  = myVoteId === opt.id;
+    const isWin = ended && (opt.votes||0)===maxVotes && (opt.votes||0)>0;
+    const canVote = !ended && !myVoteId && !opt.disabled && isLoggedIn();
+    const cls   = ['opt-row', canVote?'can-vote':'', isMy?'selected':'', isWin?'winner-opt':'', opt.disabled?'disabled-opt':'', isAnon?'anon-locked':''].filter(Boolean).join(' ');
+
+    let clickFn = '';
+    if (isAnon) clickFn = `openModal('modal-login-req')`;
+    else if (canVote) clickFn = `voteFor('${poll.id}','${opt.id}')`;
 
     return `<div class="${cls}" onclick="${clickFn}">
       <div class="opt-bar" style="width:${showStats?pct:0}%"></div>
       <div class="opt-radio"></div>
-      <div class="opt-label">${esc(opt.label)}${isWin?' 🏆':''}${opt.disabled?' <span style="font-size:11px;color:var(--text3)">(Tắt)</span>':''}</div>
+      <div class="opt-label">
+        ${esc(opt.label)}${isWin?' 🏆':''}
+        ${isMy && canChange ? `<div class="change-hint">↕ Click lựa chọn khác để đổi phiếu</div>` : ''}
+      </div>
       ${showStats
-        ? `<div class="opt-stats"><div class="opt-pct">${pct}%</div><div class="opt-cnt">${opt.votes} phiếu</div></div>`
+        ? `<div class="opt-stats"><div class="opt-pct">${pct}%</div><div class="opt-cnt">${opt.votes||0} phiếu</div></div>`
         : `<div class="hidden-stats"><span class="lock-ico">🔒</span></div>`
       }
-      ${opt.hiddenMsg&&isMy?`<span title="Có tin nhắn ẩn" style="position:relative;z-index:1;margin-left:4px;cursor:pointer;font-size:14px" onclick="event.stopPropagation();showHiddenMsg('${poll.id}','${opt.id}')">💬</span>`:''}
+      ${opt.hiddenMsg && isMy ? `<span style="position:relative;z-index:2;margin-left:4px;cursor:pointer;font-size:13px" onclick="event.stopPropagation();showHiddenMsgDirect('${esc(opt.hiddenMsg)}')">💬</span>` : ''}
     </div>`;
   }).join('');
 
-  // Actions bar
-  let actionsHTML = `<button class="btn btn-secondary btn-sm" onclick="openChartModal('${poll.id}')">📊 Biểu Đồ</button>`;
+  // Actions
+  let actHTML = `<button class="btn btn-secondary btn-sm" onclick="openChartModal('${poll.id}')">📊 Biểu Đồ</button>`;
 
-  // Reward code button (if voted & ended & has reward)
-  if(myVote && ended && poll.rewardType==='code'){
-    actionsHTML += `<button class="btn btn-sm" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--yellow)" onclick="showReward('${poll.id}')">🎁 Nhận Mã</button>`;
+  // Reward: show button if voted & ended & that option has a reward code
+  if (myVoteId && ended) {
+    const votedOpt = opts.find(o=>o.id===myVoteId);
+    if (votedOpt?.rewardCode) {
+      actHTML += `<button class="btn btn-sm" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--yellow)" onclick="showReward('${poll.id}')">🎁 Nhận Mã</button>`;
+    }
   }
-
-  if(isAdmin()){
-    actionsHTML += `<button class="btn btn-danger btn-sm" onclick="askDeletePoll('${poll.id}')">🗑 Xóa</button>`;
-  }
+  if (isAdmin()) actHTML += `<button class="btn btn-danger btn-sm" onclick="askDeletePoll('${poll.id}')">🗑 Xóa</button>`;
+  if (isAnon) actHTML += `<button class="btn btn-primary btn-sm" onclick="showPage('page-auth');switchAuthTab('login')">🔑 Đăng nhập để vote</button>`;
 
   const endDate = new Date(poll.endTime).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
   const cdId = 'cd-'+poll.id;
 
-  card.innerHTML=`
+  card.innerHTML = `
     <div class="poll-card-top">
-      <div class="poll-card-header">
-        <div class="poll-card-title">${esc(poll.title)}</div>
-      </div>
+      <div class="poll-card-title">${esc(poll.title)}</div>
       <div class="poll-card-meta">
         <span class="badge ${ended?'badge-ended':'badge-live'}">${ended?'⏹ Kết thúc':'● Live'}</span>
-        <span class="badge badge-primary">🗳 ${totalVotes} phiếu</span>
+        <span class="badge badge-primary">🗳 ${total} phiếu</span>
         ${ended
-          ? `<span class="badge" style="color:var(--text3);border-color:var(--border);background:var(--bg2)">⏰ ${endDate}</span>`
+          ? `<span class="badge badge-gray">⏰ ${endDate}</span>`
           : `<span class="badge badge-yellow">⏳ <span class="countdown" id="${cdId}">...</span></span>`
         }
-        ${poll.rewardType==='code'?`<span class="badge badge-yellow">🎁 Có phần thưởng</span>`:''}
-        ${!showStats&&!ended?`<span class="badge" style="color:var(--text3);border-color:var(--border);background:var(--bg2)">🔒 Vote để xem kết quả</span>`:''}
+        ${poll.allowChange&&!ended?`<span class="badge" style="color:var(--accent);border-color:rgba(34,211,238,.3);background:rgba(34,211,238,.06)">↕ Đổi phiếu được</span>`:''}
+        ${!showStats&&!ended?`<span class="badge badge-gray">🔒 Vote để xem</span>`:''}
       </div>
       <div class="option-list">${optsHTML}</div>
     </div>
-    <div class="poll-actions-bar">${actionsHTML}</div>`;
+    <div class="poll-actions-bar">${actHTML}</div>`;
 
-  // Countdown
-  if(!ended){
-    const tick=()=>{
+  if (!ended) {
+    const tick = () => {
       const rem = new Date(poll.endTime)-new Date();
-      const el=document.getElementById(cdId);
-      if(!el){clearInterval(cdTimers[poll.id]);return;}
-      if(rem<=0){clearInterval(cdTimers[poll.id]);renderPolls();return;}
+      const el = document.getElementById(cdId);
+      if (!el) { clearInterval(cdTimers[poll.id]); return; }
+      if (rem<=0) { clearInterval(cdTimers[poll.id]); return; }
       const d=Math.floor(rem/86400000),h=Math.floor(rem%86400000/3600000),m=Math.floor(rem%3600000/60000),s=Math.floor(rem%60000/1000);
-      el.textContent=d>0?`${d}n ${h}g ${m}p`:h>0?`${h}g ${m}p ${s}s`:`${m}p ${s}s`;
+      el.textContent = d>0?`${d}n ${h}g ${m}p`:h>0?`${h}g ${m}p ${s}s`:`${m}p ${s}s`;
     };
-    tick();
-    cdTimers[poll.id]=setInterval(tick,1000);
+    tick(); cdTimers[poll.id] = setInterval(tick,1000);
   }
-
   return card;
 }
 
-// ══════════════════════════════════════════
-// VOTE
-// ══════════════════════════════════════════
-function voteFor(pollId, optId){
-  if(!currentUser){ toast('Vui lòng đăng nhập!','t-error'); return; }
-  const polls = getPolls();
-  const poll = polls.find(p=>p.id===pollId);
-  if(!poll){ return; }
-  if(new Date(poll.endTime)<new Date()){ toast('Bình chọn đã kết thúc!','t-error'); return; }
-  const uv = getUserVotes();
-  if(uv[pollId]?.user===currentUser.username){ toast('Bạn đã bình chọn!','t-error'); return; }
+// ══════════════════════════════════════════════════════
+// VOTE — supports change vote
+// ══════════════════════════════════════════════════════
+async function voteFor(pollId, optId) {
+  if (!isLoggedIn()) { openModal('modal-login-req'); return; }
+  const poll = allPolls[pollId];
+  if (!poll) return;
+  if (new Date(poll.endTime)<new Date()) { toast('Bình chọn đã kết thúc!','t-error'); return; }
 
-  const opt = poll.options.find(o=>o.id===optId);
-  if(!opt||opt.disabled){ toast('Lựa chọn này không khả dụng!','t-error'); return; }
+  const opts    = Array.isArray(poll.options)?poll.options:Object.values(poll.options||{});
+  const optIdx  = opts.findIndex(o=>o.id===optId);
+  if (optIdx===-1||opts[optIdx].disabled) { toast('Lựa chọn không khả dụng!','t-error'); return; }
 
-  opt.votes++;
-  uv[pollId]={user:currentUser.username, optId, votedAt:new Date().toISOString()};
-  savePolls(polls); saveUV(uv);
-  renderStats();
+  const prevOptId = myVotes[pollId] || null;
 
-  // Show hidden message if any
-  if(opt.hiddenMsg){
-    setTimeout(()=>showHiddenMsgDirect(opt.hiddenMsg),300);
+  // If clicking the same option they already voted → unvote (remove vote)
+  if (prevOptId === optId) {
+    // Unvote
+    const prevIdx = opts.findIndex(o=>o.id===prevOptId);
+    const updates = {};
+    if (prevIdx!==-1) updates[`polls/${pollId}/options/${prevIdx}/votes`] = Math.max(0,(opts[prevIdx].votes||0)-1);
+    updates[`votes/${currentUser.username}/${pollId}`] = null;
+    try {
+      await window._update(window._ref(window._db), updates);
+      toast('↩ Đã bỏ chọn phiếu', 't-info');
+    } catch { toast('Lỗi!','t-error'); }
+    return;
   }
 
-  renderPolls();
-  toast('✓ Phiếu bầu đã được ghi nhận!','t-success');
+  // Change vote or new vote
+  const updates = {};
+  // Remove old vote
+  if (prevOptId) {
+    if (!poll.allowChange) { toast('Bình chọn này không cho đổi phiếu!','t-error'); return; }
+    const prevIdx = opts.findIndex(o=>o.id===prevOptId);
+    if (prevIdx!==-1) updates[`polls/${pollId}/options/${prevIdx}/votes`] = Math.max(0,(opts[prevIdx].votes||0)-1);
+  }
+  // Add new vote
+  updates[`polls/${pollId}/options/${optIdx}/votes`] = (opts[optIdx].votes||0)+1;
+  updates[`votes/${currentUser.username}/${pollId}`] = optId;
+
+  try {
+    await window._update(window._ref(window._db), updates);
+    if (prevOptId) toast('↕ Đã đổi phiếu!','t-success');
+    else toast('✓ Phiếu đã được ghi nhận!','t-success');
+
+    if (!prevOptId && opts[optIdx].hiddenMsg) {
+      setTimeout(()=>showHiddenMsgDirect(opts[optIdx].hiddenMsg), 400);
+    }
+  } catch { toast('Lỗi khi ghi phiếu!','t-error'); }
 }
 
-// ══════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// REWARD — per option
+// ══════════════════════════════════════════════════════
+function showReward(pollId) {
+  const poll = allPolls[pollId];
+  if (!poll) return;
+  const opts = Array.isArray(poll.options)?poll.options:Object.values(poll.options||{});
+  const myOptId = myVotes[pollId];
+  const myOpt = opts.find(o=>o.id===myOptId);
+  if (myOpt?.rewardCode) {
+    document.getElementById('modal-reward-option').textContent = myOpt.label;
+    document.getElementById('modal-reward-code').textContent = myOpt.rewardCode;
+    openModal('modal-reward');
+  }
+}
+
+function copyRewardCode() {
+  const code = document.getElementById('modal-reward-code').textContent;
+  navigator.clipboard.writeText(code)
+    .then(()=>toast('Đã sao chép mã!','t-success'))
+    .catch(()=>{const ta=document.createElement('textarea');ta.value=code;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('Đã sao chép!','t-success');});
+}
+
+// ══════════════════════════════════════════════════════
 // HIDDEN MESSAGE
-// ══════════════════════════════════════════
-function showHiddenMsg(pollId, optId){
-  const poll = getPolls().find(p=>p.id===pollId);
-  const opt = poll?.options.find(o=>o.id===optId);
-  if(opt?.hiddenMsg) showHiddenMsgDirect(opt.hiddenMsg);
-}
-
-function showHiddenMsgDirect(msg){
-  document.getElementById('hidden-msg-content').textContent=msg;
+// ══════════════════════════════════════════════════════
+function showHiddenMsgDirect(msg) {
+  document.getElementById('hidden-msg-content').textContent = msg;
   openModal('modal-hiddenmsg');
 }
 
-// ══════════════════════════════════════════
-// CHARTS
-// ══════════════════════════════════════════
-let chartInstance=null;
-let currentChartPollId=null;
-let currentChartType='bar';
+// ══════════════════════════════════════════════════════
+// DELETE
+// ══════════════════════════════════════════════════════
+let deletePollId = null;
+function askDeletePoll(id) { deletePollId=id; openModal('modal-delete'); }
+async function confirmDeletePoll() {
+  if (!deletePollId) return;
+  try {
+    await window._remove(window._ref(window._db,`polls/${deletePollId}`));
+    closeModal('modal-delete');
+    toast('Đã xóa bình chọn','t-success');
+  } catch { toast('Lỗi khi xóa!','t-error'); }
+  deletePollId = null;
+}
 
+// ══════════════════════════════════════════════════════
+// CHARTS
+// ══════════════════════════════════════════════════════
+let chartInstance=null, currentChartPollId=null, currentChartType='bar';
 const CHART_COLORS=['#4f8ef7','#a855f7','#22d3ee','#10b981','#f59e0b','#ef4444','#ec4899','#8b5cf6'];
 
-function openChartModal(pollId){
-  currentChartPollId=pollId;
-  currentChartType='bar';
+function openChartModal(pollId) {
+  currentChartPollId=pollId; currentChartType='bar';
   document.querySelectorAll('.chart-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
-  const poll=getPolls().find(p=>p.id===pollId);
-  document.getElementById('chart-modal-title').textContent=poll.title;
+  document.getElementById('chart-modal-title').textContent = allPolls[pollId]?.title||'';
   openModal('modal-chart');
   setTimeout(()=>drawChart('bar'),50);
 }
 
-function switchChart(type){
+function switchChart(type) {
   currentChartType=type;
   document.querySelectorAll('.chart-tab').forEach(t=>t.classList.toggle('active',t.textContent.includes(type==='bar'?'Cột':'Quạt')));
   drawChart(type);
 }
 
-function drawChart(type){
-  if(chartInstance){ chartInstance.destroy(); chartInstance=null; }
-  const poll=getPolls().find(p=>p.id===currentChartPollId);
-  if(!poll) return;
-  const labels=poll.options.map(o=>o.label);
-  const data=poll.options.map(o=>o.votes);
+function drawChart(type) {
+  if(chartInstance){chartInstance.destroy();chartInstance=null;}
+  const poll=allPolls[currentChartPollId]; if(!poll)return;
+  const opts=Array.isArray(poll.options)?poll.options:Object.values(poll.options||{});
+  const labels=opts.map(o=>o.label), data=opts.map(o=>o.votes||0);
   const colors=CHART_COLORS.slice(0,labels.length);
-
   const ctx=document.getElementById('chart-canvas').getContext('2d');
   chartInstance=new Chart(ctx,{
     type:type==='bar'?'bar':'doughnut',
-    data:{
-      labels,
-      datasets:[{
-        data,
-        backgroundColor:colors.map(c=>c+'99'),
-        borderColor:colors,
-        borderWidth:2,
-        borderRadius:type==='bar'?8:0,
-      }]
-    },
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{
-        legend:{display:type!=='bar',labels:{color:'#a0a0c0',font:{family:'JetBrains Mono',size:12}}},
-        tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed.y??ctx.parsed} phiếu`}}
-      },
-      scales: type==='bar'?{
+    data:{labels,datasets:[{data,backgroundColor:colors.map(c=>c+'99'),borderColor:colors,borderWidth:2,borderRadius:type==='bar'?8:0}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:type!=='bar',labels:{color:'#a0a0c0',font:{family:'JetBrains Mono',size:12}}},
+        tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed.y??ctx.parsed} phiếu`}}},
+      scales:type==='bar'?{
         x:{ticks:{color:'#a0a0c0',font:{family:'JetBrains Mono',size:11}},grid:{color:'rgba(255,255,255,.05)'}},
         y:{ticks:{color:'#a0a0c0',font:{family:'JetBrains Mono',size:11}},grid:{color:'rgba(255,255,255,.05)'},beginAtZero:true}
-      }:{}
-    }
+      }:{}}
   });
-
-  // Legend
-  const leg=document.getElementById('chart-legend');
-  leg.innerHTML=labels.map((l,i)=>`<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)"><span style="width:10px;height:10px;border-radius:3px;background:${colors[i]};flex-shrink:0;display:inline-block"></span>${esc(l)}: <b style="color:var(--text)">${data[i]}</b></div>`).join('');
+  document.getElementById('chart-legend').innerHTML=labels.map((l,i)=>
+    `<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)"><span style="width:10px;height:10px;border-radius:3px;background:${colors[i]};flex-shrink:0;display:inline-block"></span>${esc(l)}: <b style="color:var(--text)">${data[i]}</b></div>`
+  ).join('');
 }
 
-// ══════════════════════════════════════════
-// REWARD
-// ══════════════════════════════════════════
-function showReward(pollId){
-  const poll=getPolls().find(p=>p.id===pollId);
-  if(poll?.rewardCode){
-    document.getElementById('modal-reward-code').textContent=poll.rewardCode;
-    openModal('modal-reward');
-  }
-}
-
-function copyRewardCode(){
-  const code=document.getElementById('modal-reward-code').textContent;
-  navigator.clipboard.writeText(code).then(()=>toast('Đã sao chép mã!','t-success')).catch(()=>{
-    const ta=document.createElement('textarea');
-    ta.value=code;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    toast('Đã sao chép mã!','t-success');
-  });
-}
-
-// ══════════════════════════════════════════
-// DELETE POLL
-// ══════════════════════════════════════════
-let deletePollId=null;
-function askDeletePoll(id){ deletePollId=id; openModal('modal-delete'); }
-function confirmDeletePoll(){
-  if(!deletePollId) return;
-  const polls=getPolls().filter(p=>p.id!==deletePollId);
-  savePolls(polls);
-  deletePollId=null;
-  closeModal('modal-delete');
-  renderPolls(); renderStats();
-  toast('Đã xóa bình chọn','t-success');
-}
-
-// ══════════════════════════════════════════
+// ══════════════════════════════════════════════════════
 // PROFILE
-// ══════════════════════════════════════════
-function renderProfile(){
-  if(!currentUser) return;
-  const uv=getUserVotes();
-  const polls=getPolls();
-  const myVotedCount=Object.keys(uv).filter(pid=>uv[pid]?.user===currentUser.username).length;
-  const isAd=isAdmin();
+// ══════════════════════════════════════════════════════
+function renderProfile() {
+  if (isAnon) {
+    document.getElementById('profile-content').innerHTML=`
+      <div class="empty"><div class="empty-ico">👻</div><h3>Bạn đang ẩn danh</h3>
+      <p style="margin-bottom:20px">Đăng nhập để xem hồ sơ và tham gia bình chọn</p>
+      <button class="btn btn-primary" onclick="showPage('page-auth');switchAuthTab('login')">🔑 Đăng Nhập</button></div>`;
+    return;
+  }
+  if (!currentUser) return;
+  const polls=Object.values(allPolls), isAd=isAdmin();
   const joinDate=new Date(currentUser.createdAt).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'});
-
   document.getElementById('profile-content').innerHTML=`
     <div class="profile-header anim">
       <div class="profile-avatar ${isAd?'admin-av-lg':''}">${currentUser.username[0].toUpperCase()}</div>
-      <div class="profile-info">
+      <div>
         <h2>${esc(currentUser.username)}</h2>
-        <p>Tham gia: ${joinDate}${currentUser.email?' · '+esc(currentUser.email):''}</p>
+        <p style="font-size:14px;color:var(--text2);margin-top:3px">Tham gia: ${joinDate}${currentUser.email?' · '+esc(currentUser.email):''}</p>
         ${isAd?'<div class="admin-crown">👑 Quản Trị Viên</div>':''}
       </div>
     </div>
     <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
-      <div class="stat-box"><div class="num" style="color:var(--secondary)">${myVotedCount}</div><div class="lbl">Đã Vote</div></div>
+      <div class="stat-box"><div class="num" style="color:var(--secondary)">${Object.keys(myVotes).length}</div><div class="lbl">Đã Vote</div></div>
       <div class="stat-box"><div class="num">${polls.length}</div><div class="lbl">Tổng Poll</div></div>
       <div class="stat-box"><div class="num" style="color:var(--green)">${polls.filter(p=>new Date(p.endTime)>new Date()).length}</div><div class="lbl">Đang Mở</div></div>
     </div>
@@ -1056,72 +1283,189 @@ function renderProfile(){
       <div class="fg"><label>Mật Khẩu Hiện Tại</label><input type="password" id="pw-old" placeholder="••••••••"></div>
       <div class="fg"><label>Mật Khẩu Mới</label><input type="password" id="pw-new" placeholder="••••••••"></div>
       <div class="fg"><label>Xác Nhận</label><input type="password" id="pw-cf" placeholder="••••••••">
-        <div class="err-msg" id="pw-err"></div>
-      </div>
+        <div class="err-msg" id="pw-err"></div></div>
       <button class="btn btn-primary btn-sm" onclick="changePassword()">Lưu Mật Khẩu</button>
     </div>`;
 }
 
-function changePassword(){
-  const old=document.getElementById('pw-old').value;
-  const nw=document.getElementById('pw-new').value;
-  const cf=document.getElementById('pw-cf').value;
+async function changePassword() {
+  const old=document.getElementById('pw-old').value, nw=document.getElementById('pw-new').value, cf=document.getElementById('pw-cf').value;
   const err=document.getElementById('pw-err');
   if(old!==currentUser.password){showErr(err,'Mật khẩu hiện tại không đúng!');return;}
   if(nw.length<6){showErr(err,'Mật khẩu mới ít nhất 6 ký tự!');return;}
   if(nw!==cf){showErr(err,'Mật khẩu xác nhận không khớp!');return;}
-  const users=getUsers();
-  const u=users.find(u=>u.username===currentUser.username);
-  u.password=nw;
-  saveUsers(users);
-  currentUser=u;
-  localStorage.setItem(K_SESSION,JSON.stringify(u));
-  err.classList.remove('show');
-  ['pw-old','pw-new','pw-cf'].forEach(id=>document.getElementById(id).value='');
-  toast('Đổi mật khẩu thành công!','t-success');
+  try {
+    await window._update(window._ref(window._db,`users/${currentUser.username}`),{password:nw});
+    currentUser.password=nw; localStorage.setItem(K_SESSION,JSON.stringify(currentUser));
+    err.classList.remove('show');
+    ['pw-old','pw-new','pw-cf'].forEach(id=>document.getElementById(id).value='');
+    toast('Đổi mật khẩu thành công!','t-success');
+  } catch { toast('Lỗi!','t-error'); }
 }
 
-// ══════════════════════════════════════════
-// MODAL HELPERS
-// ══════════════════════════════════════════
-function openModal(id){ document.getElementById(id).classList.add('open'); }
-function closeModal(id){
+// ══════════════════════════════════════════════════════
+// ADMIN SETTINGS PAGE
+// ══════════════════════════════════════════════════════
+function renderSettings() {
+  if (!isAdmin()) return;
+  const s = appSettings;
+  document.getElementById('settings-content').innerHTML = `
+    <div style="max-width:700px;display:flex;flex-direction:column;gap:16px">
+
+      <!-- App Identity -->
+      <div class="create-section anim">
+        <div class="create-section-title">🪪 Thông Tin App</div>
+        <div class="settings-grid">
+          <div class="fg"><label>Tên App</label>
+            <input type="text" id="s-appname" value="${esc(s.appName||'')}" placeholder="NTZ VOTTING HUB"></div>
+          <div class="fg"><label>Version</label>
+            <input type="text" id="s-version" value="${esc(s.appVersion||'')}" placeholder="v4.0"></div>
+          <div class="fg"><label>Update Text</label>
+            <input type="text" id="s-update" value="${esc(s.appUpdate||'')}" placeholder="FIREBASE"></div>
+          <div class="fg"><label>URL Logo <span style="color:var(--text3);font-size:10px;text-transform:none;font-weight:400">(hình vuông, tối thiểu 34x34)</span></label>
+            <input type="text" id="s-logo" value="${esc(s.logoUrl||'')}" placeholder="https://..." oninput="previewLogo()"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+          <div id="logo-preview-box" style="width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--primary),var(--secondary));overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff">NV</div>
+          <span style="font-size:12px;color:var(--text3)">Preview logo</span>
+        </div>
+      </div>
+
+      <!-- Primary Color -->
+      <div class="create-section">
+        <div class="create-section-title">🎨 Màu Chủ Đạo</div>
+        <div class="fg">
+          <label>Màu Primary</label>
+          <div class="color-row">
+            <div class="color-preview" id="color-preview-box" style="background:${s.primaryColor||'#4f8ef7'}"></div>
+            <input type="text" id="s-color" value="${s.primaryColor||'#4f8ef7'}" placeholder="#4f8ef7" oninput="updateColorPreview()" style="font-family:'JetBrains Mono',monospace">
+            <input type="color" id="s-color-picker" value="${s.primaryColor||'#4f8ef7'}" oninput="document.getElementById('s-color').value=this.value;updateColorPreview()">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('s-color-picker').click()">🎨 Chọn</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Background -->
+      <div class="create-section">
+        <div class="create-section-title">🖼 Ảnh Nền</div>
+        <div class="fg"><label>URL Ảnh</label>
+          <input type="text" id="s-bgurl" value="${esc(s.bgImageUrl||'')}" placeholder="https://... (để trống = không có ảnh nền)" oninput="updateBgPreview()"></div>
+        <div class="fg"><label>Hoặc Upload File</label>
+          <input type="file" id="s-bgfile" accept="image/*" onchange="handleBgUpload(this)" style="padding:8px;font-size:13px;cursor:pointer"></div>
+        <div class="fg">
+          <label>Độ Mờ (Blur) — <span id="blur-val">${s.bgBlur||0}px</span></label>
+          <div class="slider-row">
+            <input type="range" id="s-blur" min="0" max="20" value="${s.bgBlur||0}" oninput="document.getElementById('blur-val').textContent=this.value+'px';updateBgPreview()">
+          </div>
+        </div>
+        <div class="fg">
+          <label>Độ Trong Suốt (Opacity) — <span id="opacity-val">${Math.round((s.bgOpacity??0.05)*100)}%</span></label>
+          <div class="slider-row">
+            <input type="range" id="s-opacity" min="0" max="100" value="${Math.round((s.bgOpacity??0.05)*100)}" oninput="document.getElementById('opacity-val').textContent=this.value+'%';updateBgPreview()">
+          </div>
+        </div>
+        <div class="bg-preview" id="bg-preview-box" style="background-image:${s.bgImageUrl?`url('${s.bgImageUrl}')`:'none'};filter:blur(${s.bgBlur||0}px)">
+          ${!s.bgImageUrl?'<div class="bg-preview-overlay">Chưa có ảnh nền</div>':''}
+        </div>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%;padding:14px" onclick="saveSettings()">💾 Lưu Tất Cả Thay Đổi</button>
+      <button class="btn btn-secondary btn-sm" style="width:100%" onclick="resetSettings()">↺ Khôi Phục Mặc Định</button>
+    </div>`;
+}
+
+function previewLogo() {
+  const url = document.getElementById('s-logo')?.value.trim();
+  const box = document.getElementById('logo-preview-box');
+  if (!box) return;
+  if (url) box.innerHTML = `<img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.textContent='NV'">`;
+  else box.textContent = 'NV';
+}
+
+function updateColorPreview() {
+  const val = document.getElementById('s-color')?.value;
+  const box = document.getElementById('color-preview-box');
+  if (box && val) box.style.background = val;
+}
+
+function updateBgPreview() {
+  const url  = document.getElementById('s-bgurl')?.value.trim();
+  const blur = document.getElementById('s-blur')?.value||0;
+  const box  = document.getElementById('bg-preview-box');
+  if (!box) return;
+  box.style.backgroundImage = url ? `url('${url}')` : 'none';
+  box.style.filter = `blur(${blur}px)`;
+  box.innerHTML = url ? '' : '<div class="bg-preview-overlay">Chưa có ảnh nền</div>';
+}
+
+function handleBgUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUrl = e.target.result;
+    const urlInput = document.getElementById('s-bgurl');
+    if (urlInput) urlInput.value = dataUrl;
+    updateBgPreview();
+    toast('Đã tải ảnh lên (base64)', 't-success');
+  };
+  reader.readAsDataURL(file);
+}
+
+async function saveSettings() {
+  const newSettings = {
+    appName:    document.getElementById('s-appname')?.value.trim() || DEFAULT_SETTINGS.appName,
+    appVersion: document.getElementById('s-version')?.value.trim() || DEFAULT_SETTINGS.appVersion,
+    appUpdate:  document.getElementById('s-update')?.value.trim()  || DEFAULT_SETTINGS.appUpdate,
+    logoUrl:    document.getElementById('s-logo')?.value.trim()    || '',
+    primaryColor: document.getElementById('s-color')?.value.trim() || DEFAULT_SETTINGS.primaryColor,
+    bgImageUrl: document.getElementById('s-bgurl')?.value.trim()   || '',
+    bgBlur:     parseInt(document.getElementById('s-blur')?.value) || 0,
+    bgOpacity:  (parseInt(document.getElementById('s-opacity')?.value)||5) / 100,
+  };
+  try {
+    appSettings = { ...appSettings, ...newSettings };
+    await saveAppSettings();
+    toast('✓ Đã lưu cài đặt!', 't-success');
+  } catch { toast('Lỗi khi lưu!','t-error'); }
+}
+
+async function resetSettings() {
+  if (!confirm('Khôi phục về mặc định?')) return;
+  appSettings = { ...DEFAULT_SETTINGS };
+  await saveAppSettings();
+  renderSettings();
+  toast('Đã khôi phục mặc định','t-info');
+}
+
+// ══════════════════════════════════════════════════════
+// MODALS
+// ══════════════════════════════════════════════════════
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) {
   document.getElementById(id).classList.remove('open');
-  if(id==='modal-chart'&&chartInstance){ chartInstance.destroy(); chartInstance=null; }
+  if (id==='modal-chart'&&chartInstance){chartInstance.destroy();chartInstance=null;}
 }
 document.querySelectorAll('.modal-overlay').forEach(o=>{
   o.addEventListener('click',e=>{if(e.target===o)closeModal(o.id);});
 });
 
-// ══════════════════════════════════════════
+// ══════════════════════════════════════════════════════
 // TOAST
-// ══════════════════════════════════════════
-function toast(msg,type='t-info'){
+// ══════════════════════════════════════════════════════
+function toast(msg, type='t-info') {
   const stack=document.getElementById('toast-stack');
   const t=document.createElement('div');
-  t.className=`toast ${type}`;
-  t.textContent=msg;
+  t.className=`toast ${type}`; t.textContent=msg;
   stack.appendChild(t);
-  requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ t.classList.add('show'); }); });
-  setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(),400); },2800);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
+  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),400);},2800);
 }
 
-// ══════════════════════════════════════════
+// ══════════════════════════════════════════════════════
 // UTILS
-// ══════════════════════════════════════════
-function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-// ══════════════════════════════════════════
-// INIT
-// ══════════════════════════════════════════
-renderTopbar();
-if(currentUser){
-  showPage('page-main');
-  setView('polls');
-  renderStats();
-} else {
-  showPage('page-auth');
-}
+// ══════════════════════════════════════════════════════
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 </script>
 </body>
 </html>
