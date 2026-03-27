@@ -7,31 +7,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
-<!-- Firebase UMD (không dùng ESM/dynamic import) -->
+<!-- ✅ FIX 1: Dùng script tag tĩnh thay vì load động, nâng lên v12.11.0 -->
+<script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-database-compat.js"></script>
+
 <script>
-  window._useFirebase = false; // mặc định fallback
+  window._useFirebase = false;
   window._firebaseReady = false;
 
-  // Load Firebase SDK bằng script tag thông thường
-  function _loadScript(src) {
-    return new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = src; s.async = true;
-      s.onload = resolve;
-      s.onerror = () => reject(new Error('Script load failed: ' + src));
-      document.head.appendChild(s);
-    });
-  }
-
-  // Khởi tạo Firebase sau khi SDK đã load
   async function _initFirebase() {
     try {
-      await Promise.all([
-        _loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js'),
-        // database load sau app
-      ]);
-      await _loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js');
-
       const firebaseConfig = {
         apiKey:            "AIzaSyCQsknbigQD5Cf3WVZigk7_oMh0OIkxrD0",
         authDomain:        "ntz-votting.firebaseapp.com",
@@ -39,33 +24,29 @@
         projectId:         "ntz-votting",
         storageBucket:     "ntz-votting.firebasestorage.app",
         messagingSenderId: "964776422497",
-        appId:             "1:964776422497:web:c522df70704d1f1ce88e20"
+        appId:             "1:964776422497:web:c522df70704d1f1ce88e20",
+        measurementId:     "G-VMY412673W"
       };
 
-      // firebase compat API gắn vào window.firebase
       if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
       const db = firebase.database();
 
-      // Test kết nối — timeout 6 giây
+      // ✅ FIX 2: Tăng timeout lên 12 giây để tránh false-negative trên mạng chậm
       await Promise.race([
         db.ref('.info/connected').once('value'),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000))
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 12000))
       ]);
 
-      // Wrap compat API → interface giống modular để DB Adapter dùng được
       window._db       = db;
       window._fbRef    = (path) => db.ref(path);
       window._fbGet    = (ref) => ref.once('value').then(s => s);
       window._fbSet    = (ref, val) => ref.set(val);
-      window._fbUpdate = (updates) => {
-        // updates là { 'path/key': value } — dùng db.ref().update()
-        return db.ref('/').update(updates);
-      };
+      window._fbUpdate = (updates) => db.ref('/').update(updates);
       window._fbRemove = (ref) => ref.remove();
       window._fbOnValue = (ref, cb) => {
         const handler = snap => cb(snap.exists() ? snap.val() : null);
         ref.on('value', handler);
-        return () => ref.off('value', handler); // unsubscribe
+        return () => ref.off('value', handler);
       };
 
       window._useFirebase   = true;
@@ -76,12 +57,26 @@
       window._useFirebase   = false;
       window._firebaseReady = false;
     }
-    // Dù Firebase OK hay không, vẫn fire event để app tiếp tục
     window.dispatchEvent(new CustomEvent('storage-ready', { detail: { firebase: window._useFirebase } }));
   }
 
-  // Kick off — không block render
-  _initFirebase();
+  // ✅ FIX 3: Đợi DOM sẵn sàng rồi mới init để chắc chắn SDK đã load xong
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _initFirebase);
+  } else {
+    _initFirebase();
+  }
+</script>
+
+<!-- ✅ FIX 4: Hash password bằng SHA-256 (Web Crypto API — không cần thư viện) -->
+<script>
+async function hashPassword(password) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password + 'ntz_salt_2024');
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 </script>
 
 <style>
@@ -123,18 +118,15 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 @keyframes drift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-20px) scale(1.05)}66%{transform:translate(-20px,30px) scale(.95)}}
 #app{position:relative;z-index:2}
 
-/* ── CONNECTING ── */
 .connecting-overlay{position:fixed;inset:0;background:var(--bg);z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .4s}
 .connecting-overlay.hidden{opacity:0;pointer-events:none}
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ── STORAGE MODE BADGE ── */
 .mode-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:600;border:1px solid}
 .mode-firebase{color:#f59e0b;border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.08)}
 .mode-local{color:var(--text3);border-color:var(--border);background:var(--bg2)}
 
-/* ── TOPBAR ── */
 .topbar{background:rgba(12,12,20,.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;padding:0 24px}
 .topbar-inner{max-width:1200px;margin:0 auto;height:62px;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .logo-mark{display:flex;align-items:center;gap:10px;text-decoration:none;cursor:pointer}
@@ -156,11 +148,9 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse-dot 1.5s ease-in-out infinite;flex-shrink:0}
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
 
-/* ── PAGE ── */
 .page{display:none;min-height:calc(100vh - 62px)}
 .page.active{display:block}
 
-/* ── LANDING ── */
 .landing-wrap{min-height:calc(100vh - 62px);display:flex;align-items:center;justify-content:center;padding:32px 16px}
 .landing-box{width:100%;max-width:460px;text-align:center}
 .landing-icon{width:80px;height:80px;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 20px;box-shadow:0 0 40px rgba(79,142,247,.3)}
@@ -170,14 +160,12 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .landing-or{font-size:12px;color:var(--text3);margin:4px 0}
 .anon-badge{display:inline-flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border);border-radius:999px;padding:4px 12px;font-size:11px;color:var(--text3);margin-top:12px}
 
-/* ── AUTH ── */
 .auth-wrap{min-height:calc(100vh - 62px);display:flex;align-items:center;justify-content:center;padding:32px 16px}
 .auth-box{width:100%;max-width:420px;background:var(--bg1);border:1px solid var(--border);border-radius:var(--r2);padding:36px;box-shadow:var(--shadow-lg)}
 .auth-tabs{display:flex;background:var(--bg2);border-radius:8px;padding:3px;margin-bottom:24px;border:1px solid var(--border)}
 .auth-tab{flex:1;padding:8px;border-radius:6px;border:none;background:transparent;color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;text-align:center}
 .auth-tab.active{background:var(--bg1);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.3)}
 
-/* ── FORM ── */
 .fg{margin-bottom:16px}
 .fg label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase}
 .fg input,.fg textarea,.fg select{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;outline:none;transition:border-color .2s}
@@ -198,13 +186,12 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .btn-ghost:hover{border-color:var(--border2);color:var(--text2)}
 .btn-sm{padding:7px 12px;font-size:12px;border-radius:7px}
 .btn-xs{padding:5px 9px;font-size:11px;border-radius:6px}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none !important}
 
-/* ── LAYOUT ── */
 .main-wrap{max-width:1200px;margin:0 auto;padding:28px 20px}
 .main-grid{display:grid;grid-template-columns:260px 1fr;gap:24px;align-items:start}
 @media(max-width:900px){.main-grid{grid-template-columns:1fr}}
 
-/* ── SIDEBAR ── */
 .sidebar-card{background:rgba(12,12,20,.8);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:16px}
 .sidebar-card h3{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin-bottom:14px}
 .nav-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;transition:all .2s;font-size:14px;color:var(--text2);border:1px solid transparent}
@@ -216,7 +203,6 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .stat-box .num{font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--primary)}
 .stat-box .lbl{font-size:10px;color:var(--text3);margin-top:2px}
 
-/* ── CONTENT ── */
 .content-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap}
 .content-header h2{font-size:20px;font-weight:700}
 .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600;border:1px solid}
@@ -226,7 +212,6 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .badge-yellow{color:var(--yellow);border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.08)}
 .badge-gray{color:var(--text3);border-color:var(--border);background:var(--bg2)}
 
-/* ── POLL CARD ── */
 .poll-list{display:flex;flex-direction:column;gap:16px}
 .poll-card{background:rgba(12,12,20,.85);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;transition:border-color .2s}
 .poll-card:hover{border-color:var(--border2)}
@@ -235,13 +220,14 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .poll-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .poll-actions-bar{display:flex;gap:8px;flex-wrap:wrap;padding:12px 20px;background:rgba(5,5,8,.6);border-top:1px solid var(--border)}
 
-/* ── OPTION ROW ── */
 .option-list{display:flex;flex-direction:column;gap:7px}
 .opt-row{position:relative;display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .25s;overflow:hidden;user-select:none}
 .opt-row.can-vote:hover{border-color:var(--primary);background:rgba(79,142,247,.05)}
 .opt-row.selected{border-color:var(--primary);background:var(--primary-dim)}
 .opt-row.winner-opt{border-color:rgba(16,185,129,.5);background:var(--green-dim)}
 .opt-row.disabled-opt{opacity:.4;cursor:not-allowed}
+/* ✅ FIX 5: Thêm trạng thái voting (loading) cho opt-row */
+.opt-row.voting{opacity:.6;cursor:wait;pointer-events:none}
 .opt-bar{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,rgba(79,142,247,.1),transparent);transition:width .8s cubic-bezier(.16,1,.3,1);pointer-events:none}
 .opt-row.winner-opt .opt-bar{background:linear-gradient(90deg,rgba(16,185,129,.1),transparent)}
 .opt-row.selected .opt-bar{background:linear-gradient(90deg,rgba(79,142,247,.15),transparent)}
@@ -256,7 +242,6 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .hidden-stats .lock-ico{font-size:13px;opacity:.25}
 .change-hint{font-size:10px;color:var(--primary);opacity:.7;margin-top:2px}
 
-/* ── CREATE ── */
 .create-wrap{max-width:700px}
 .create-section{background:rgba(12,12,20,.85);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--r2);padding:24px;margin-bottom:16px}
 .create-section-title{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin-bottom:16px;display:flex;align-items:center;gap:8px}
@@ -272,7 +257,6 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .opt-card-reward{grid-column:1/-1}
 .opt-card-actions{display:flex;justify-content:flex-end;margin-top:10px;gap:6px}
 
-/* ── MODAL ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .25s}
 .modal-overlay.open{opacity:1;pointer-events:all}
 .modal{background:var(--bg1);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);transform:scale(.96) translateY(8px);transition:transform .25s}
@@ -287,7 +271,6 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .chart-tab.active{background:var(--primary-dim);border-color:rgba(79,142,247,.4);color:var(--primary)}
 .chart-wrap{position:relative;height:300px}
 
-/* ── REWARD ── */
 .reward-box{background:var(--bg);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:16px;margin-top:14px}
 .reward-label{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--yellow);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
 .reward-code-display{display:flex;align-items:center;gap:10px}
@@ -295,24 +278,19 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .copy-btn{padding:7px 13px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:7px;color:var(--yellow);font-size:12px;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:.2s}
 .copy-btn:hover{background:var(--yellow);color:#000}
 
-/* ── SETTINGS ── */
 .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:640px){.settings-grid{grid-template-columns:1fr}}
 .color-preview{width:36px;height:36px;border-radius:8px;flex-shrink:0;border:2px solid var(--border)}
 .color-row{display:flex;align-items:center;gap:10px}
 .color-row input[type=color]{width:0;height:0;opacity:0;position:absolute}
-.slider-row{display:flex;align-items:center;gap:12px}
-.slider-row input[type=range]{flex:1;accent-color:var(--primary)}
 .bg-preview{width:100%;height:100px;border-radius:10px;border:1px solid var(--border);overflow:hidden;margin-top:8px;position:relative;background-size:cover;background-position:center}
 .bg-preview-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,.4)}
 
-/* ── PROFILE ── */
 .profile-header{background:linear-gradient(135deg,var(--bg2),var(--bg1));border:1px solid var(--border);border-radius:var(--r2);padding:28px;margin-bottom:20px;display:flex;align-items:center;gap:20px}
 .profile-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex-shrink:0}
 .profile-avatar.admin-av-lg{background:linear-gradient(135deg,#f59e0b,#ef4444)}
 .admin-crown{display:inline-flex;align-items:center;gap:5px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:999px;padding:3px 10px;font-size:11px;color:var(--yellow);font-weight:600;margin-top:6px}
 
-/* ── TOGGLE ── */
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
 .toggle-row:last-child{border-bottom:none;padding-bottom:0}
 .toggle{position:relative;width:40px;height:22px;flex-shrink:0}
@@ -322,7 +300,6 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .toggle input:checked+.toggle-slider{background:var(--primary);border-color:var(--primary)}
 .toggle input:checked+.toggle-slider::before{transform:translateX(18px);background:#fff}
 
-/* ── MISC ── */
 .empty{text-align:center;padding:60px 20px}
 .empty-ico{font-size:48px;opacity:.2;margin-bottom:14px}
 .empty h3{font-size:17px;font-weight:600;color:var(--text2);margin-bottom:6px}
@@ -356,21 +333,19 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 
 <div id="app">
 
-<!-- ═══ TOPBAR ═══ -->
 <nav class="topbar">
   <div class="topbar-inner">
     <div class="logo-mark" onclick="goHome()">
       <div class="logo-icon" id="logo-icon-el">NV</div>
       <div>
         <div class="logo-text" id="logo-text-el">NTZ <span>VOTTING</span> HUB</div>
-        <div class="logo-badge" id="logo-badge-el">UPDATE ✦ v4.0</div>
+        <div class="logo-badge" id="logo-badge-el">UPDATE ✦ v4.1</div>
       </div>
     </div>
     <div class="topbar-right" id="topbar-right"></div>
   </div>
 </nav>
 
-<!-- ═══ PAGE: LANDING ═══ -->
 <div class="page active" id="page-landing">
   <div class="landing-wrap">
     <div class="landing-box anim">
@@ -387,7 +362,6 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
   </div>
 </div>
 
-<!-- ═══ PAGE: AUTH ═══ -->
 <div class="page" id="page-auth">
   <div class="auth-wrap">
     <div class="auth-box anim">
@@ -401,7 +375,7 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
         <div class="fg"><label>Mật Khẩu</label>
           <input type="password" id="l-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
           <div class="err-msg" id="l-err">Tên đăng nhập hoặc mật khẩu không đúng!</div></div>
-        <button class="btn btn-primary btn-full" onclick="doLogin()">Đăng Nhập</button>
+        <button class="btn btn-primary btn-full" id="btn-login" onclick="doLogin()">Đăng Nhập</button>
         <div style="text-align:center;margin-top:14px">
           <button class="btn btn-ghost btn-sm" onclick="enterAnonymous()">👻 Vào ẩn danh</button>
         </div>
@@ -416,13 +390,12 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
         <div class="fg"><label>Xác Nhận Mật Khẩu</label>
           <input type="password" id="r-confirm" placeholder="••••••••" onkeydown="if(event.key==='Enter')doRegister()">
           <div class="err-msg" id="r-err"></div></div>
-        <button class="btn btn-primary btn-full" onclick="doRegister()">Tạo Tài Khoản</button>
+        <button class="btn btn-primary btn-full" id="btn-register" onclick="doRegister()">Tạo Tài Khoản</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══ PAGE: MAIN ═══ -->
 <div class="page" id="page-main">
   <div class="main-wrap">
     <div class="main-grid">
@@ -508,9 +481,9 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
     </div>
   </div>
 </div>
-</div><!-- #app -->
+</div>
 
-<!-- ═══ MODALS ═══ -->
+<!-- MODALS -->
 <div class="modal-overlay" id="modal-chart">
   <div class="modal">
     <div class="modal-header"><h3 id="chart-modal-title">Biểu Đồ Kết Quả</h3><button class="modal-close" onclick="closeModal('modal-chart')">×</button></div>
@@ -582,26 +555,17 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 
 <script>
 // ════════════════════════════════════════════════════════════════
-// STORAGE ADAPTER — Firebase ↔ localStorage tự động chuyển đổi
+// STORAGE ADAPTER
 // ════════════════════════════════════════════════════════════════
-
 const LS_PREFIX  = 'ntz_';
-const K_USERS    = 'ntz_users';
-const K_POLLS    = 'ntz_polls';
-const K_VOTES    = 'ntz_votes';
-const K_SETTINGS = 'ntz_settings';
 const K_SESSION  = 'ntz_session_v4';
 const K_ANON     = 'ntz_anon';
 
-// ── localStorage helpers ──
 function lsGet(key)      { try{return JSON.parse(localStorage.getItem(key));}catch{return null;} }
 function lsSet(key,val)  { localStorage.setItem(key, JSON.stringify(val)); }
 function lsDel(key)      { localStorage.removeItem(key); }
 
-// ── Unified DB API ──
-// Tất cả đều return Promise, listeners return unsubscribe function
 const DB = {
-  // ─ READ ─
   async get(path) {
     if (window._useFirebase) {
       const snap = await window._fbGet(window._fbRef(path));
@@ -609,8 +573,6 @@ const DB = {
     }
     return lsGetPath(path);
   },
-
-  // ─ SET ─
   async set(path, val) {
     if (window._useFirebase) {
       await window._fbSet(window._fbRef(path), val);
@@ -619,8 +581,6 @@ const DB = {
       notifyListeners(path);
     }
   },
-
-  // ─ UPDATE (merge) ─
   async update(updates) {
     if (window._useFirebase) {
       await window._fbUpdate(updates);
@@ -633,8 +593,6 @@ const DB = {
       tops.forEach(t => notifyListeners(t));
     }
   },
-
-  // ─ DELETE ─
   async remove(path) {
     if (window._useFirebase) {
       await window._fbRemove(window._fbRef(path));
@@ -643,20 +601,15 @@ const DB = {
       notifyListeners(path.split('/')[0]);
     }
   },
-
-  // ─ LISTEN ─
   listen(path, cb) {
     if (window._useFirebase) {
       return window._fbOnValue(window._fbRef(path), cb);
     } else {
-      // Đăng ký local listener
       const key = path.split('/')[0];
       if (!localListeners[key]) localListeners[key] = [];
       const handler = () => cb(lsGetPath(path));
       localListeners[key].push(handler);
-      // Gọi ngay lần đầu
       cb(lsGetPath(path));
-      // Return unsubscribe
       return () => {
         localListeners[key] = localListeners[key].filter(h=>h!==handler);
       };
@@ -664,8 +617,6 @@ const DB = {
   }
 };
 
-// ── localStorage path helpers ──
-// path format: "table" hoặc "table/key" hoặc "table/key/subkey"
 function lsGetPath(path) {
   const parts = path.split('/').filter(Boolean);
   const root = lsGet(LS_PREFIX + parts[0]) || {};
@@ -680,10 +631,7 @@ function lsGetPath(path) {
 
 function lsSetPath(path, val) {
   const parts = path.split('/').filter(Boolean);
-  if (parts.length === 1) {
-    lsSet(LS_PREFIX + parts[0], val);
-    return;
-  }
+  if (parts.length === 1) { lsSet(LS_PREFIX + parts[0], val); return; }
   const root = lsGet(LS_PREFIX + parts[0]) || {};
   let cur = root;
   for (let i=1;i<parts.length-1;i++) {
@@ -708,7 +656,6 @@ function lsDelPath(path) {
   lsSet(LS_PREFIX + parts[0], root);
 }
 
-// ── Local listener system (cho localStorage mode) ──
 const localListeners = {};
 function notifyListeners(topKey) {
   (localListeners[topKey] || []).forEach(h => h());
@@ -726,11 +673,14 @@ let unsubPolls   = null;
 let unsubVotes   = null;
 let unsubSettings = null;
 
+// ✅ FIX 6: Debounce cho vote để tránh spam / race condition
+let voteInProgress = new Set();
+
 const isAdmin    = () => currentUser?.role === 'admin';
 const isLoggedIn = () => !!currentUser;
 
 // ════════════════════════════════════════════════════════════════
-// INIT — đợi storage-ready event
+// INIT
 // ════════════════════════════════════════════════════════════════
 window.addEventListener('storage-ready', async (e) => {
   const usingFirebase = e.detail.firebase;
@@ -738,14 +688,12 @@ window.addEventListener('storage-ready', async (e) => {
     ? 'Đang kết nối Firebase...'
     : 'Khởi động chế độ offline...';
 
-  // Badge storage mode
   const badgeEl = document.getElementById('storage-mode-badge');
   if (badgeEl) {
     badgeEl.innerHTML = usingFirebase
       ? '<span class="mode-badge mode-firebase">🔥 Firebase</span>'
       : '<span class="mode-badge mode-local">💾 Local</span>';
   }
-  // Real-time label
   const rtEl = document.getElementById('realtime-label');
   if (rtEl) {
     if (usingFirebase) rtEl.innerHTML = '<div class="live-dot"></div><span style="color:var(--green)">Real-time</span>';
@@ -755,7 +703,6 @@ window.addEventListener('storage-ready', async (e) => {
   await seedAdmin();
   await loadAppSettings();
 
-  // Restore session
   try { currentUser = JSON.parse(localStorage.getItem(K_SESSION)); } catch {}
   if (currentUser) {
     const u = await DB.get(`users/${currentUser.username}`);
@@ -778,15 +725,27 @@ window.addEventListener('storage-ready', async (e) => {
 });
 
 // ════════════════════════════════════════════════════════════════
-// SEED ADMIN
+// SEED ADMIN — ✅ FIX 7: Hash mật khẩu admin khi seed
 // ════════════════════════════════════════════════════════════════
 async function seedAdmin() {
   const existing = await DB.get('users/atnoob303');
   if (!existing) {
+    const hashedPw = await hashPassword('banbe012@');
     await DB.set('users/atnoob303', {
-      username:'atnoob303', password:'banbe012@',
-      email:'', role:'admin', createdAt: new Date().toISOString()
+      username:'atnoob303',
+      password: hashedPw,
+      email:'', role:'admin',
+      createdAt: new Date().toISOString()
     });
+  }
+  // ✅ Migration: nếu admin cũ lưu plaintext thì migrate luôn
+  else if (existing.password === 'banbe012@') {
+    const hashedPw = await hashPassword('banbe012@');
+    await DB.update({ 'users/atnoob303/password': hashedPw });
+    if (currentUser?.username === 'atnoob303') {
+      currentUser.password = hashedPw;
+      localStorage.setItem(K_SESSION, JSON.stringify(currentUser));
+    }
   }
 }
 
@@ -794,7 +753,7 @@ async function seedAdmin() {
 // APP SETTINGS
 // ════════════════════════════════════════════════════════════════
 const DEFAULT_SETTINGS = {
-  appName:'NTZ VOTTING HUB', appVersion:'v4.0', appUpdate:'UPDATE',
+  appName:'NTZ VOTTING HUB', appVersion:'v4.1', appUpdate:'UPDATE',
   logoUrl:'', primaryColor:'#4f8ef7',
   bgImageUrl:'', bgBlur:0, bgOpacity:0.05,
 };
@@ -815,7 +774,7 @@ function applyAppSettings() {
   const nameEl=document.getElementById('logo-text-el');
   if(nameEl&&s.appName){const p=s.appName.split(' ');nameEl.innerHTML=p.length>=2?`${esc(p[0])} <span>${esc(p.slice(1).join(' '))}</span>`:`<span>${esc(s.appName)}</span>`;}
   const badgeEl=document.getElementById('logo-badge-el');
-  if(badgeEl) badgeEl.textContent=`${s.appUpdate||'UPDATE'} ✦ ${s.appVersion||'v4.0'}`;
+  if(badgeEl) badgeEl.textContent=`${s.appUpdate||'UPDATE'} ✦ ${s.appVersion||'v4.1'}`;
   document.title=s.appName||'NTZ VOTTING HUB';
   const lt=document.getElementById('landing-title');
   if(lt) lt.textContent=s.appName||'NTZ VOTTING HUB';
@@ -886,7 +845,7 @@ function enterAnonymous() {
 }
 
 // ════════════════════════════════════════════════════════════════
-// AUTH
+// AUTH — ✅ FIX 8: Hash password khi login/register
 // ════════════════════════════════════════════════════════════════
 function switchAuthTab(tab) {
   document.getElementById('tab-login').classList.toggle('active',tab==='login');
@@ -896,21 +855,32 @@ function switchAuthTab(tab) {
 }
 
 async function doLogin() {
+  const btn = document.getElementById('btn-login');
   const un=document.getElementById('l-username').value.trim();
   const pw=document.getElementById('l-password').value;
   const err=document.getElementById('l-err');
+  if(!un||!pw) { err.classList.add('show'); return; }
+
+  btn.disabled = true; btn.textContent = 'Đang đăng nhập...';
   try {
     const u = await DB.get(`users/${un}`);
-    if(!u || u.password!==pw){ err.classList.add('show'); return; }
+    if(!u){ err.classList.add('show'); return; }
+
+    // So sánh hash
+    const hashedInput = await hashPassword(pw);
+    if(u.password !== hashedInput){ err.classList.add('show'); return; }
+
     err.classList.remove('show');
     currentUser=u; isAnon=false;
     localStorage.setItem(K_SESSION,JSON.stringify(currentUser));
     localStorage.removeItem(K_ANON);
     onLogin();
   } catch(e){ toast('Lỗi kết nối!','t-error'); }
+  finally { btn.disabled = false; btn.textContent = 'Đăng Nhập'; }
 }
 
 async function doRegister() {
+  const btn = document.getElementById('btn-register');
   const un=document.getElementById('r-username').value.trim();
   const em=document.getElementById('r-email').value.trim();
   const pw=document.getElementById('r-password').value;
@@ -920,10 +890,14 @@ async function doRegister() {
   if(!/^[a-zA-Z0-9_]{3,20}$/.test(un)) {showErr(err,'Tên đăng nhập 3-20 ký tự, không dấu, không cách!');return;}
   if(pw.length<6)                       {showErr(err,'Mật khẩu ít nhất 6 ký tự!');return;}
   if(pw!==cf)                           {showErr(err,'Mật khẩu xác nhận không khớp!');return;}
+
+  btn.disabled = true; btn.textContent = 'Đang tạo tài khoản...';
   try {
     const existing = await DB.get(`users/${un}`);
     if(existing){showErr(err,'Tên đăng nhập đã tồn tại!');return;}
-    const newUser={username:un,password:pw,email:em,role:'user',createdAt:new Date().toISOString()};
+
+    const hashedPw = await hashPassword(pw);
+    const newUser={username:un, password:hashedPw, email:em, role:'user', createdAt:new Date().toISOString()};
     await DB.set(`users/${un}`,newUser);
     currentUser=newUser; isAnon=false;
     localStorage.setItem(K_SESSION,JSON.stringify(newUser));
@@ -931,6 +905,7 @@ async function doRegister() {
     err.classList.remove('show');
     onLogin();
   } catch(e){ toast('Lỗi!','t-error'); }
+  finally { btn.disabled = false; btn.textContent = 'Tạo Tài Khoản'; }
 }
 
 function showErr(el,msg){el.textContent=msg;el.classList.add('show');}
@@ -1079,11 +1054,16 @@ async function createPoll() {
   if(options.length<2) {toast('Cần ít nhất 2 lựa chọn!','t-error');return;}
   if(!endTime)         {toast('Chọn thời gian kết thúc!','t-error');return;}
 
+  // ✅ FIX 9: Lưu options dưới dạng Object (key=id) thay vì Array để Firebase không bị convert
+  const optionsMap = {};
+  options.forEach(o => { optionsMap[o.id] = o; });
+
   const pollId='p'+Date.now();
   try {
     await DB.set(`polls/${pollId}`,{
-      id:pollId,title,endTime,hideBefore,allowChange,
-      createdAt:new Date().toISOString(),createdBy:currentUser.username,options
+      id:pollId, title, endTime, hideBefore, allowChange,
+      createdAt:new Date().toISOString(), createdBy:currentUser.username,
+      options: optionsMap
     });
     toast('✦ Tạo bình chọn thành công!','t-success');
     setView('polls');
@@ -1091,11 +1071,19 @@ async function createPoll() {
 }
 
 // ════════════════════════════════════════════════════════════════
-// RENDER POLLS
+// RENDER POLLS — ✅ FIX 10: Clear timer an toàn, tránh leak
 // ════════════════════════════════════════════════════════════════
-let cdTimers={};
+const cdTimers = {};
+
+function clearAllTimers() {
+  Object.keys(cdTimers).forEach(k => {
+    clearInterval(cdTimers[k]);
+    delete cdTimers[k];
+  });
+}
+
 function renderPolls() {
-  Object.values(cdTimers).forEach(clearInterval); cdTimers={};
+  clearAllTimers();
   const polls=Object.values(allPolls).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   const container=document.getElementById('polls-list');
   if(!polls.length){
@@ -1117,11 +1105,18 @@ function renderMyVotes() {
   polls.forEach(p=>container.appendChild(buildPollCard(p)));
 }
 
+// ✅ FIX 11: getOptions luôn trả về Array đúng cách từ cả Object lẫn Array
+function getOptions(poll) {
+  if (!poll.options) return [];
+  if (Array.isArray(poll.options)) return poll.options;
+  return Object.values(poll.options);
+}
+
 function buildPollCard(poll) {
   const now=new Date();
   const ended=new Date(poll.endTime)<now;
   const myVoteId=isLoggedIn()?(myVotes[poll.id]||null):null;
-  const opts=Array.isArray(poll.options)?poll.options:Object.values(poll.options||{});
+  const opts=getOptions(poll);
   const total=opts.reduce((s,o)=>s+(o.votes||0),0);
   const maxVotes=Math.max(...opts.map(o=>o.votes||0));
   const showStats=!poll.hideBefore||myVoteId||ended||isAnon;
@@ -1139,7 +1134,7 @@ function buildPollCard(poll) {
     let clickFn='';
     if(isAnon) clickFn=`openModal('modal-login-req')`;
     else if(canVote||isMy) clickFn=`voteFor('${poll.id}','${opt.id}')`;
-    return `<div class="${cls}" onclick="${clickFn}">
+    return `<div class="${cls}" onclick="${clickFn}" id="optrow-${poll.id}-${opt.id}">
       <div class="opt-bar" style="width:${showStats?pct:0}%"></div>
       <div class="opt-radio"></div>
       <div class="opt-label">${esc(opt.label)}${isWin?' 🏆':''}${isMy&&canChange?'<div class="change-hint">↕ Click lựa chọn khác để đổi</div>':''}</div>
@@ -1179,55 +1174,79 @@ function buildPollCard(poll) {
     const tick=()=>{
       const rem=new Date(poll.endTime)-new Date();
       const el=document.getElementById(cdId);
-      if(!el){clearInterval(cdTimers[poll.id]);return;}
-      if(rem<=0){clearInterval(cdTimers[poll.id]);renderPolls();return;}
+      if(!el){ clearInterval(cdTimers[poll.id]); delete cdTimers[poll.id]; return; }
+      if(rem<=0){ clearInterval(cdTimers[poll.id]); delete cdTimers[poll.id]; renderPolls(); return; }
       const d=Math.floor(rem/86400000),h=Math.floor(rem%86400000/3600000),m=Math.floor(rem%3600000/60000),s=Math.floor(rem%60000/1000);
       el.textContent=d>0?`${d}n ${h}g ${m}p`:h>0?`${h}g ${m}p ${s}s`:`${m}p ${s}s`;
     };
-    tick(); cdTimers[poll.id]=setInterval(tick,1000);
+    tick();
+    // ✅ FIX 12: Clear timer cũ của cùng poll trước khi tạo mới
+    if(cdTimers[poll.id]) clearInterval(cdTimers[poll.id]);
+    cdTimers[poll.id]=setInterval(tick,1000);
   }
   return card;
 }
 
 // ════════════════════════════════════════════════════════════════
-// VOTE
+// VOTE — ✅ FIX 13: Debounce + lock tránh spam / race condition
 // ════════════════════════════════════════════════════════════════
 async function voteFor(pollId, optId) {
   if(!isLoggedIn()){openModal('modal-login-req');return;}
-  const poll=allPolls[pollId]; if(!poll) return;
-  if(new Date(poll.endTime)<new Date()){toast('Bình chọn đã kết thúc!','t-error');return;}
-  const opts=Array.isArray(poll.options)?poll.options:Object.values(poll.options||{});
-  const optIdx=opts.findIndex(o=>o.id===optId);
-  if(optIdx===-1||opts[optIdx].disabled){toast('Lựa chọn không khả dụng!','t-error');return;}
 
-  const prevOptId=myVotes[pollId]||null;
-
-  // Click lại cùng option → bỏ phiếu
-  if(prevOptId===optId){
-    const prevIdx=opts.findIndex(o=>o.id===prevOptId);
-    const updates={};
-    if(prevIdx!==-1) updates[`polls/${pollId}/options/${prevIdx}/votes`]=Math.max(0,(opts[prevIdx].votes||0)-1);
-    updates[`votes/${currentUser.username}/${pollId}`]=null;
-    try{await DB.update(updates); toast('↩ Đã bỏ chọn phiếu','t-info');}
-    catch{toast('Lỗi!','t-error');}
+  // Debounce: nếu đang xử lý vote cho poll này thì bỏ qua
+  if(voteInProgress.has(pollId)){
+    toast('Đang xử lý...','t-info');
     return;
   }
 
-  if(prevOptId&&!poll.allowChange){toast('Bình chọn này không cho đổi phiếu!','t-error');return;}
-  const updates={};
-  if(prevOptId){
-    const prevIdx=opts.findIndex(o=>o.id===prevOptId);
-    if(prevIdx!==-1) updates[`polls/${pollId}/options/${prevIdx}/votes`]=Math.max(0,(opts[prevIdx].votes||0)-1);
-  }
-  updates[`polls/${pollId}/options/${optIdx}/votes`]=(opts[optIdx].votes||0)+1;
-  updates[`votes/${currentUser.username}/${pollId}`]=optId;
+  const poll=allPolls[pollId]; if(!poll) return;
+  if(new Date(poll.endTime)<new Date()){toast('Bình chọn đã kết thúc!','t-error');return;}
 
-  try{
+  const opts=getOptions(poll);
+  const opt=opts.find(o=>o.id===optId);
+  if(!opt||opt.disabled){toast('Lựa chọn không khả dụng!','t-error');return;}
+
+  const prevOptId=myVotes[pollId]||null;
+
+  // Thêm trạng thái loading lên row
+  const rowEl = document.getElementById(`optrow-${pollId}-${optId}`);
+  if(rowEl) rowEl.classList.add('voting');
+
+  voteInProgress.add(pollId);
+
+  try {
+    // Click lại cùng option → bỏ phiếu
+    if(prevOptId===optId){
+      const prevOpt=opts.find(o=>o.id===prevOptId);
+      const updates={};
+      if(prevOpt) updates[`polls/${pollId}/options/${prevOptId}/votes`]=Math.max(0,(prevOpt.votes||0)-1);
+      updates[`votes/${currentUser.username}/${pollId}`]=null;
+      await DB.update(updates);
+      toast('↩ Đã bỏ chọn phiếu','t-info');
+      return;
+    }
+
+    if(prevOptId&&!poll.allowChange){toast('Bình chọn này không cho đổi phiếu!','t-error');return;}
+
+    const updates={};
+    if(prevOptId){
+      const prevOpt=opts.find(o=>o.id===prevOptId);
+      if(prevOpt) updates[`polls/${pollId}/options/${prevOptId}/votes`]=Math.max(0,(prevOpt.votes||0)-1);
+    }
+    updates[`polls/${pollId}/options/${optId}/votes`]=(opt.votes||0)+1;
+    updates[`votes/${currentUser.username}/${pollId}`]=optId;
+
     await DB.update(updates);
     if(prevOptId) toast('↕ Đã đổi phiếu!','t-success');
     else toast('✓ Phiếu đã được ghi nhận!','t-success');
-    if(!prevOptId&&opts[optIdx].hiddenMsg) setTimeout(()=>showHiddenMsgDirect(opts[optIdx].hiddenMsg),400);
-  } catch{toast('Lỗi khi ghi phiếu!','t-error');}
+    if(!prevOptId&&opt.hiddenMsg) setTimeout(()=>showHiddenMsgDirect(opt.hiddenMsg),400);
+
+  } catch(e) {
+    toast('Lỗi khi ghi phiếu!','t-error');
+  } finally {
+    voteInProgress.delete(pollId);
+    if(rowEl) rowEl.classList.remove('voting');
+  }
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -1235,7 +1254,7 @@ async function voteFor(pollId, optId) {
 // ════════════════════════════════════════════════════════════════
 function showReward(pollId) {
   const poll=allPolls[pollId]; if(!poll) return;
-  const opts=Array.isArray(poll.options)?poll.options:Object.values(poll.options||{});
+  const opts=getOptions(poll);
   const myOpt=opts.find(o=>o.id===myVotes[pollId]);
   if(myOpt?.rewardCode){
     document.getElementById('modal-reward-option').textContent=myOpt.label;
@@ -1263,7 +1282,21 @@ let deletePollId=null;
 function askDeletePoll(id){deletePollId=id;openModal('modal-delete');}
 async function confirmDeletePoll() {
   if(!deletePollId) return;
-  try{await DB.remove(`polls/${deletePollId}`);closeModal('modal-delete');toast('Đã xóa bình chọn','t-success');}
+  try{
+    // ✅ FIX 14: Xóa cả votes liên quan khi xóa poll
+    const updates = { [`polls/${deletePollId}`]: null };
+    const allVoteUsers = await DB.get('votes');
+    if(allVoteUsers) {
+      Object.keys(allVoteUsers).forEach(username => {
+        if(allVoteUsers[username][deletePollId]) {
+          updates[`votes/${username}/${deletePollId}`] = null;
+        }
+      });
+    }
+    await DB.update(updates);
+    closeModal('modal-delete');
+    toast('Đã xóa bình chọn','t-success');
+  }
   catch{toast('Lỗi khi xóa!','t-error');}
   deletePollId=null;
 }
@@ -1288,7 +1321,7 @@ function switchChart(type) {
 function drawChart(type) {
   if(chartInstance){chartInstance.destroy();chartInstance=null;}
   const poll=allPolls[currentChartPollId]; if(!poll) return;
-  const opts=Array.isArray(poll.options)?poll.options:Object.values(poll.options||{});
+  const opts=getOptions(poll);
   const labels=opts.map(o=>o.label),data=opts.map(o=>o.votes||0);
   const colors=CHART_COLORS.slice(0,labels.length);
   const ctx=document.getElementById('chart-canvas').getContext('2d');
@@ -1309,7 +1342,7 @@ function drawChart(type) {
 }
 
 // ════════════════════════════════════════════════════════════════
-// PROFILE
+// PROFILE — ✅ FIX 15: Hash password khi đổi mật khẩu
 // ════════════════════════════════════════════════════════════════
 function renderProfile() {
   if(isAnon){
@@ -1342,23 +1375,31 @@ function renderProfile() {
       <div class="fg"><label>Mật Khẩu Mới</label><input type="password" id="pw-new" placeholder="••••••••"></div>
       <div class="fg"><label>Xác Nhận</label><input type="password" id="pw-cf" placeholder="••••••••">
         <div class="err-msg" id="pw-err"></div></div>
-      <button class="btn btn-primary btn-sm" onclick="changePassword()">Lưu Mật Khẩu</button>
+      <button class="btn btn-primary btn-sm" id="btn-changepw" onclick="changePassword()">Lưu Mật Khẩu</button>
     </div>`;
 }
 
 async function changePassword() {
-  const old=document.getElementById('pw-old').value,nw=document.getElementById('pw-new').value,cf=document.getElementById('pw-cf').value;
+  const btn=document.getElementById('btn-changepw');
+  const old=document.getElementById('pw-old').value;
+  const nw=document.getElementById('pw-new').value;
+  const cf=document.getElementById('pw-cf').value;
   const err=document.getElementById('pw-err');
-  if(old!==currentUser.password){showErr(err,'Mật khẩu hiện tại không đúng!');return;}
+  const hashedOld = await hashPassword(old);
+  if(hashedOld!==currentUser.password){showErr(err,'Mật khẩu hiện tại không đúng!');return;}
   if(nw.length<6){showErr(err,'Mật khẩu mới ít nhất 6 ký tự!');return;}
   if(nw!==cf){showErr(err,'Mật khẩu xác nhận không khớp!');return;}
+  btn.disabled=true; btn.textContent='Đang lưu...';
   try{
-    await DB.update({[`users/${currentUser.username}/password`]:nw});
-    currentUser.password=nw; localStorage.setItem(K_SESSION,JSON.stringify(currentUser));
+    const hashedNew = await hashPassword(nw);
+    await DB.update({[`users/${currentUser.username}/password`]:hashedNew});
+    currentUser.password=hashedNew;
+    localStorage.setItem(K_SESSION,JSON.stringify(currentUser));
     err.classList.remove('show');
     ['pw-old','pw-new','pw-cf'].forEach(id=>document.getElementById(id).value='');
     toast('Đổi mật khẩu thành công!','t-success');
   } catch{toast('Lỗi!','t-error');}
+  finally{btn.disabled=false;btn.textContent='Lưu Mật Khẩu';}
 }
 
 // ════════════════════════════════════════════════════════════════
