@@ -6,104 +6,73 @@
 <title>NTZ VOTTING HUB</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-
-<!-- ✅ FIX 1: Dùng script tag tĩnh thay vì load động, nâng lên v12.11.0 -->
 <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-database-compat.js"></script>
-
 <script>
   window._useFirebase = false;
   window._firebaseReady = false;
-
   async function _initFirebase() {
     try {
       const firebaseConfig = {
-        apiKey:            "AIzaSyCQsknbigQD5Cf3WVZigk7_oMh0OIkxrD0",
-        authDomain:        "ntz-votting.firebaseapp.com",
-        databaseURL:       "https://ntz-votting-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId:         "ntz-votting",
-        storageBucket:     "ntz-votting.firebasestorage.app",
-        messagingSenderId: "964776422497",
-        appId:             "1:964776422497:web:c522df70704d1f1ce88e20",
-        measurementId:     "G-VMY412673W"
+        apiKey:"AIzaSyCQsknbigQD5Cf3WVZigk7_oMh0OIkxrD0",
+        authDomain:"ntz-votting.firebaseapp.com",
+        databaseURL:"https://ntz-votting-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId:"ntz-votting",
+        storageBucket:"ntz-votting.firebasestorage.app",
+        messagingSenderId:"964776422497",
+        appId:"1:964776422497:web:c522df70704d1f1ce88e20"
       };
-
       if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
       const db = firebase.database();
-
-      // ✅ FIX 2: Tăng timeout lên 12 giây để tránh false-negative trên mạng chậm
       await Promise.race([
-        db.ref('.info/connected').once('value'),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 12000))
+        db.ref('appSettings').once('value'),
+        new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))
       ]);
-
-      window._db       = db;
-      window._fbRef    = (path) => db.ref(path);
-      window._fbGet    = (ref) => ref.once('value').then(s => s);
-      window._fbSet    = (ref, val) => ref.set(val);
-      window._fbUpdate = (updates) => db.ref('/').update(updates);
-      window._fbRemove = (ref) => ref.remove();
-      window._fbOnValue = (ref, cb) => {
-        const handler = snap => cb(snap.exists() ? snap.val() : null);
-        ref.on('value', handler);
-        return () => ref.off('value', handler);
+      window._db=db;
+      window._fbRef=(path)=>db.ref(path);
+      window._fbGet=(ref)=>ref.once('value').then(s=>s);
+      window._fbSet=(ref,val)=>ref.set(val);
+      window._fbUpdate=(updates)=>db.ref('/').update(updates);
+      window._fbRemove=(ref)=>ref.remove();
+      window._fbOnValue=(ref,cb)=>{
+        const handler=snap=>cb(snap.exists()?snap.val():null);
+        ref.on('value',handler);
+        return ()=>ref.off('value',handler);
       };
-
-      window._useFirebase   = true;
-      window._firebaseReady = true;
-      console.info('[NTZ] Firebase kết nối thành công ✓');
+      window._useFirebase=true;
+      window._firebaseReady=true;
+      console.info('[NTZ] Firebase ✓');
     } catch(e) {
-      console.warn('[NTZ] Firebase không khả dụng → dùng localStorage.', e.message);
-      window._useFirebase   = false;
-      window._firebaseReady = false;
+      console.warn('[NTZ] Firebase fallback→localStorage',e.message);
+      window._useFirebase=false;
+      window._firebaseReady=false;
     }
-    window.dispatchEvent(new CustomEvent('storage-ready', { detail: { firebase: window._useFirebase } }));
+    window.dispatchEvent(new CustomEvent('storage-ready',{detail:{firebase:window._useFirebase}}));
   }
-
-  // ✅ FIX 3: Đợi DOM sẵn sàng rồi mới init để chắc chắn SDK đã load xong
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', _initFirebase);
-  } else {
-    _initFirebase();
-  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',_initFirebase);
+  else _initFirebase();
 </script>
-
-<!-- ✅ FIX 4: Hash password bằng SHA-256 (Web Crypto API — không cần thư viện) -->
 <script>
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password + 'ntz_salt_2024');
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+async function hashPassword(password){
+  const encoder=new TextEncoder();
+  const data=encoder.encode(password+'ntz_salt_2024');
+  const hashBuffer=await crypto.subtle.digest('SHA-256',data);
+  const hashArray=Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 </script>
-
 <style>
-:root {
-  --bg: #050508;
-  --bg1: #0c0c14;
-  --bg2: #12121e;
-  --bg3: #1a1a2a;
-  --border: #252535;
-  --border2: #303048;
-  --primary: #4f8ef7;
-  --primary-dim: rgba(79,142,247,0.15);
-  --secondary: #a855f7;
-  --secondary-dim: rgba(168,85,247,0.12);
-  --accent: #22d3ee;
-  --green: #10b981;
-  --green-dim: rgba(16,185,129,0.12);
-  --yellow: #f59e0b;
-  --red: #ef4444;
-  --red-dim: rgba(239,68,68,0.12);
-  --text: #f0f0ff;
-  --text2: #a0a0c0;
-  --text3: #606080;
-  --r: 10px;
-  --r2: 14px;
-  --shadow: 0 4px 24px rgba(0,0,0,0.4);
-  --shadow-lg: 0 8px 40px rgba(0,0,0,0.6);
+:root{
+  --bg:#050508;--bg1:#0c0c14;--bg2:#12121e;--bg3:#1a1a2a;
+  --border:#252535;--border2:#303048;
+  --primary:#4f8ef7;--primary-dim:rgba(79,142,247,0.15);
+  --secondary:#a855f7;--secondary-dim:rgba(168,85,247,0.12);
+  --accent:#22d3ee;--green:#10b981;--green-dim:rgba(16,185,129,0.12);
+  --yellow:#f59e0b;--red:#ef4444;--red-dim:rgba(239,68,68,0.12);
+  --roblox:#00b2ff;--roblox-dim:rgba(0,178,255,0.12);
+  --text:#f0f0ff;--text2:#a0a0c0;--text3:#606080;
+  --r:10px;--r2:14px;
+  --shadow:0 4px 24px rgba(0,0,0,0.4);--shadow-lg:0 8px 40px rgba(0,0,0,0.6);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
@@ -117,16 +86,13 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .aurora-blob:nth-child(3){width:400px;height:400px;background:radial-gradient(circle,rgba(34,211,238,.05),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:-12s}
 @keyframes drift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-20px) scale(1.05)}66%{transform:translate(-20px,30px) scale(.95)}}
 #app{position:relative;z-index:2}
-
 .connecting-overlay{position:fixed;inset:0;background:var(--bg);z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .4s}
 .connecting-overlay.hidden{opacity:0;pointer-events:none}
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-
 .mode-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:600;border:1px solid}
 .mode-firebase{color:#f59e0b;border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.08)}
 .mode-local{color:var(--text3);border-color:var(--border);background:var(--bg2)}
-
 .topbar{background:rgba(12,12,20,.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;padding:0 24px}
 .topbar-inner{max-width:1200px;margin:0 auto;height:62px;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .logo-mark{display:flex;align-items:center;gap:10px;text-decoration:none;cursor:pointer}
@@ -138,7 +104,8 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .topbar-right{display:flex;align-items:center;gap:10px}
 .user-pill{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:999px;cursor:pointer;transition:all .2s;font-size:13px}
 .user-pill:hover{border-color:var(--border2)}
-.avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;object-fit:cover}
+.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .avatar.admin-av{background:linear-gradient(135deg,#f59e0b,#ef4444)}
 .avatar.anon-av{background:linear-gradient(135deg,#606080,#303048)}
 .nav-btn{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;white-space:nowrap}
@@ -147,10 +114,8 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .nav-btn.primary:hover{background:#3a7be8}
 .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse-dot 1.5s ease-in-out infinite;flex-shrink:0}
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
-
 .page{display:none;min-height:calc(100vh - 62px)}
 .page.active{display:block}
-
 .landing-wrap{min-height:calc(100vh - 62px);display:flex;align-items:center;justify-content:center;padding:32px 16px}
 .landing-box{width:100%;max-width:460px;text-align:center}
 .landing-icon{width:80px;height:80px;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 20px;box-shadow:0 0 40px rgba(79,142,247,.3)}
@@ -159,19 +124,16 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .landing-btns{display:flex;flex-direction:column;gap:10px;max-width:280px;margin:0 auto}
 .landing-or{font-size:12px;color:var(--text3);margin:4px 0}
 .anon-badge{display:inline-flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border);border-radius:999px;padding:4px 12px;font-size:11px;color:var(--text3);margin-top:12px}
-
 .auth-wrap{min-height:calc(100vh - 62px);display:flex;align-items:center;justify-content:center;padding:32px 16px}
 .auth-box{width:100%;max-width:420px;background:var(--bg1);border:1px solid var(--border);border-radius:var(--r2);padding:36px;box-shadow:var(--shadow-lg)}
 .auth-tabs{display:flex;background:var(--bg2);border-radius:8px;padding:3px;margin-bottom:24px;border:1px solid var(--border)}
 .auth-tab{flex:1;padding:8px;border-radius:6px;border:none;background:transparent;color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;text-align:center}
 .auth-tab.active{background:var(--bg1);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.3)}
-
 .fg{margin-bottom:16px}
 .fg label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase}
 .fg input,.fg textarea,.fg select{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;outline:none;transition:border-color .2s}
 .fg input:focus,.fg textarea:focus,.fg select:focus{border-color:var(--primary)}
 .fg textarea{resize:vertical;min-height:70px}
-.fg .hint{font-size:11px;color:var(--text3);margin-top:4px}
 .err-msg{font-size:12px;color:var(--red);margin-top:6px;display:none}
 .err-msg.show{display:block}
 .btn{padding:11px 20px;border-radius:var(--r);border:none;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap}
@@ -184,14 +146,14 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .btn-danger:hover{background:var(--red);color:#fff}
 .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text3)}
 .btn-ghost:hover{border-color:var(--border2);color:var(--text2)}
+.btn-roblox{background:var(--roblox-dim);border:1px solid rgba(0,178,255,.3);color:var(--roblox)}
+.btn-roblox:hover{background:var(--roblox);color:#fff}
 .btn-sm{padding:7px 12px;font-size:12px;border-radius:7px}
 .btn-xs{padding:5px 9px;font-size:11px;border-radius:6px}
-.btn:disabled{opacity:.5;cursor:not-allowed;transform:none !important}
-
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
 .main-wrap{max-width:1200px;margin:0 auto;padding:28px 20px}
 .main-grid{display:grid;grid-template-columns:260px 1fr;gap:24px;align-items:start}
 @media(max-width:900px){.main-grid{grid-template-columns:1fr}}
-
 .sidebar-card{background:rgba(12,12,20,.8);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:16px}
 .sidebar-card h3{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin-bottom:14px}
 .nav-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;transition:all .2s;font-size:14px;color:var(--text2);border:1px solid transparent}
@@ -202,7 +164,6 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .stat-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
 .stat-box .num{font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--primary)}
 .stat-box .lbl{font-size:10px;color:var(--text3);margin-top:2px}
-
 .content-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap}
 .content-header h2{font-size:20px;font-weight:700}
 .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:600;border:1px solid}
@@ -211,7 +172,7 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .badge-primary{color:var(--primary);border-color:rgba(79,142,247,.3);background:var(--primary-dim)}
 .badge-yellow{color:var(--yellow);border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.08)}
 .badge-gray{color:var(--text3);border-color:var(--border);background:var(--bg2)}
-
+.badge-roblox{color:var(--roblox);border-color:rgba(0,178,255,.3);background:var(--roblox-dim)}
 .poll-list{display:flex;flex-direction:column;gap:16px}
 .poll-card{background:rgba(12,12,20,.85);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;transition:border-color .2s}
 .poll-card:hover{border-color:var(--border2)}
@@ -219,14 +180,12 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .poll-card-title{font-size:17px;font-weight:700;line-height:1.35;margin-bottom:10px}
 .poll-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .poll-actions-bar{display:flex;gap:8px;flex-wrap:wrap;padding:12px 20px;background:rgba(5,5,8,.6);border-top:1px solid var(--border)}
-
 .option-list{display:flex;flex-direction:column;gap:7px}
 .opt-row{position:relative;display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .25s;overflow:hidden;user-select:none}
 .opt-row.can-vote:hover{border-color:var(--primary);background:rgba(79,142,247,.05)}
 .opt-row.selected{border-color:var(--primary);background:var(--primary-dim)}
 .opt-row.winner-opt{border-color:rgba(16,185,129,.5);background:var(--green-dim)}
 .opt-row.disabled-opt{opacity:.4;cursor:not-allowed}
-/* ✅ FIX 5: Thêm trạng thái voting (loading) cho opt-row */
 .opt-row.voting{opacity:.6;cursor:wait;pointer-events:none}
 .opt-bar{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,rgba(79,142,247,.1),transparent);transition:width .8s cubic-bezier(.16,1,.3,1);pointer-events:none}
 .opt-row.winner-opt .opt-bar{background:linear-gradient(90deg,rgba(16,185,129,.1),transparent)}
@@ -241,13 +200,11 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .opt-cnt{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace}
 .hidden-stats .lock-ico{font-size:13px;opacity:.25}
 .change-hint{font-size:10px;color:var(--primary);opacity:.7;margin-top:2px}
-
 .create-wrap{max-width:700px}
 .create-section{background:rgba(12,12,20,.85);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--r2);padding:24px;margin-bottom:16px}
 .create-section-title{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin-bottom:16px;display:flex;align-items:center;gap:8px}
 .create-section-title::after{content:'';flex:1;height:1px;background:var(--border)}
-.opt-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;transition:border-color .2s}
-.opt-card:hover{border-color:var(--border2)}
+.opt-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px}
 .opt-card-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .opt-card-num{width:22px;height:22px;border-radius:6px;background:var(--primary-dim);border:1px solid rgba(79,142,247,.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--primary);flex-shrink:0}
 .opt-card-header input{flex:1;background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:4px 0;font-size:14px;font-weight:600;color:var(--text)}
@@ -256,7 +213,6 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .opt-card-body .fg{margin-bottom:0}
 .opt-card-reward{grid-column:1/-1}
 .opt-card-actions{display:flex;justify-content:flex-end;margin-top:10px;gap:6px}
-
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .25s}
 .modal-overlay.open{opacity:1;pointer-events:all}
 .modal{background:var(--bg1);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);transform:scale(.96) translateY(8px);transition:transform .25s}
@@ -270,14 +226,12 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .chart-tab{padding:7px 16px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;cursor:pointer;transition:.2s}
 .chart-tab.active{background:var(--primary-dim);border-color:rgba(79,142,247,.4);color:var(--primary)}
 .chart-wrap{position:relative;height:300px}
-
 .reward-box{background:var(--bg);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:16px;margin-top:14px}
 .reward-label{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--yellow);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
 .reward-code-display{display:flex;align-items:center;gap:10px}
 .reward-code{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;letter-spacing:4px;color:var(--yellow);flex:1}
 .copy-btn{padding:7px 13px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:7px;color:var(--yellow);font-size:12px;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:.2s}
 .copy-btn:hover{background:var(--yellow);color:#000}
-
 .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:640px){.settings-grid{grid-template-columns:1fr}}
 .color-preview{width:36px;height:36px;border-radius:8px;flex-shrink:0;border:2px solid var(--border)}
@@ -285,12 +239,6 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .color-row input[type=color]{width:0;height:0;opacity:0;position:absolute}
 .bg-preview{width:100%;height:100px;border-radius:10px;border:1px solid var(--border);overflow:hidden;margin-top:8px;position:relative;background-size:cover;background-position:center}
 .bg-preview-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:rgba(255,255,255,.4)}
-
-.profile-header{background:linear-gradient(135deg,var(--bg2),var(--bg1));border:1px solid var(--border);border-radius:var(--r2);padding:28px;margin-bottom:20px;display:flex;align-items:center;gap:20px}
-.profile-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex-shrink:0}
-.profile-avatar.admin-av-lg{background:linear-gradient(135deg,#f59e0b,#ef4444)}
-.admin-crown{display:inline-flex;align-items:center;gap:5px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:999px;padding:3px 10px;font-size:11px;color:var(--yellow);font-weight:600;margin-top:6px}
-
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
 .toggle-row:last-child{border-bottom:none;padding-bottom:0}
 .toggle{position:relative;width:40px;height:22px;flex-shrink:0}
@@ -299,7 +247,6 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 .toggle-slider::before{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:var(--text3);left:2px;top:2px;transition:.25s}
 .toggle input:checked+.toggle-slider{background:var(--primary);border-color:var(--primary)}
 .toggle input:checked+.toggle-slider::before{transform:translateX(18px);background:#fff}
-
 .empty{text-align:center;padding:60px 20px}
 .empty-ico{font-size:48px;opacity:.2;margin-bottom:14px}
 .empty h3{font-size:17px;font-weight:600;color:var(--text2);margin-bottom:6px}
@@ -319,27 +266,83 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 @keyframes fadein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .anim{animation:fadein .3s ease-out both}
 @media(max-width:640px){.topbar{padding:0 14px}.main-wrap{padding:14px}}
+
+/* ══════════════════════════════════════════
+   PROFILE NEW
+══════════════════════════════════════════ */
+.profile-cover{width:100%;height:180px;border-radius:var(--r2) var(--r2) 0 0;background:linear-gradient(135deg,var(--bg2),var(--bg3));position:relative;overflow:hidden;background-size:cover;background-position:center}
+.profile-cover-edit{position:absolute;bottom:10px;right:10px}
+.profile-main{background:var(--bg1);border:1px solid var(--border);border-radius:0 0 var(--r2) var(--r2);padding:0 24px 24px;margin-bottom:20px}
+.profile-avatar-wrap{position:relative;display:inline-block;margin-top:-40px;margin-bottom:12px}
+.profile-avatar-lg{width:80px;height:80px;border-radius:50%;border:3px solid var(--bg1);background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;overflow:hidden;flex-shrink:0}
+.profile-avatar-lg img{width:100%;height:100%;object-fit:cover}
+.profile-avatar-frame{position:absolute;inset:-4px;border-radius:50%;pointer-events:none;z-index:2}
+.avatar-edit-btn{position:absolute;bottom:0;right:0;width:26px;height:26px;border-radius:50%;background:var(--primary);border:2px solid var(--bg1);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;z-index:3}
+.profile-name-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.profile-name{font-size:22px;font-weight:800}
+.profile-username{font-size:14px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+.profile-bio{font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:12px}
+.profile-badges-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.roblox-card{background:var(--roblox-dim);border:1px solid rgba(0,178,255,.25);border-radius:12px;padding:16px;display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.roblox-avatar{width:52px;height:52px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--bg3)}
+.roblox-avatar img{width:100%;height:100%;object-fit:cover}
+.roblox-info{flex:1;min-width:0}
+.roblox-name{font-size:16px;font-weight:700;color:var(--roblox)}
+.roblox-disp{font-size:12px;color:var(--text2)}
+.roblox-id{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+.verified-shield{display:inline-flex;align-items:center;gap:4px;background:rgba(0,178,255,.12);border:1px solid rgba(0,178,255,.3);border-radius:999px;padding:2px 8px;font-size:10px;color:var(--roblox);font-weight:700}
+
+/* Roblox search */
+.rblx-search-wrap{position:relative}
+.rblx-results{position:absolute;top:100%;left:0;right:0;background:var(--bg1);border:1px solid var(--border2);border-radius:10px;margin-top:4px;max-height:280px;overflow-y:auto;z-index:50;box-shadow:var(--shadow-lg)}
+.rblx-item{display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;transition:background .15s;border-bottom:1px solid var(--border)}
+.rblx-item:last-child{border-bottom:none}
+.rblx-item:hover{background:var(--bg2)}
+.rblx-item-avatar{width:40px;height:40px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--bg3)}
+.rblx-item-avatar img{width:100%;height:100%;object-fit:cover}
+.rblx-item-name{font-size:14px;font-weight:600}
+.rblx-item-disp{font-size:12px;color:var(--text3)}
+
+/* Avatar frames */
+.frame-selector{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.frame-opt{padding:8px;border-radius:8px;border:2px solid var(--border);cursor:pointer;text-align:center;transition:.2s;font-size:11px;color:var(--text2)}
+.frame-opt:hover{border-color:var(--border2)}
+.frame-opt.selected{border-color:var(--primary);background:var(--primary-dim);color:var(--primary)}
+.frame-preview{width:36px;height:36px;border-radius:50%;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:18px}
+
+/* Titles/badges system */
+.title-selector{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.title-opt{padding:8px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:12px;transition:.2s;display:flex;align-items:center;gap:6px}
+.title-opt:hover{border-color:var(--border2);background:var(--bg2)}
+.title-opt.selected{border-color:var(--primary);background:var(--primary-dim);color:var(--primary)}
+
+/* Image upload component */
+.img-upload-box{border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;transition:.2s;cursor:pointer}
+.img-upload-box:hover{border-color:var(--primary);background:var(--primary-dim)}
+.img-upload-box input[type=file]{display:none}
+.img-upload-preview{width:100%;height:120px;object-fit:cover;border-radius:8px;margin-top:8px}
+.img-input-row{display:flex;gap:8px;align-items:center;margin-top:8px}
+.img-input-row input{flex:1}
+
+/* Profile stats */
+.profile-stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
 </style>
 </head>
 <body>
-
 <div class="connecting-overlay" id="connecting-overlay">
   <div class="spinner"></div>
   <p style="font-size:14px;color:var(--text2)" id="connecting-msg">Đang khởi động...</p>
 </div>
-
 <div id="bg-image-layer"></div>
 <div class="aurora"><div class="aurora-blob"></div><div class="aurora-blob"></div><div class="aurora-blob"></div></div>
-
 <div id="app">
-
 <nav class="topbar">
   <div class="topbar-inner">
     <div class="logo-mark" onclick="goHome()">
       <div class="logo-icon" id="logo-icon-el">NV</div>
       <div>
         <div class="logo-text" id="logo-text-el">NTZ <span>VOTTING</span> HUB</div>
-        <div class="logo-badge" id="logo-badge-el">UPDATE ✦ v4.1</div>
+        <div class="logo-badge" id="logo-badge-el">UPDATE ✦ v5.0</div>
       </div>
     </div>
     <div class="topbar-right" id="topbar-right"></div>
@@ -411,9 +414,8 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
           </div>
         </div>
         <div class="sidebar-card">
-          <h3 style="display:flex;align-items:center;gap:6px">
-            Thống Kê
-            <div class="live-dot" id="live-dot-stat"></div>
+          <h3 style="display:flex;align-items:center;gap:6px">Thống Kê
+            <div class="live-dot"></div>
             <span id="storage-mode-badge"></span>
           </h3>
           <div class="stat-grid">
@@ -424,7 +426,6 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
           </div>
         </div>
       </aside>
-
       <main>
         <div id="view-polls">
           <div class="content-header">
@@ -486,7 +487,7 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 <!-- MODALS -->
 <div class="modal-overlay" id="modal-chart">
   <div class="modal">
-    <div class="modal-header"><h3 id="chart-modal-title">Biểu Đồ Kết Quả</h3><button class="modal-close" onclick="closeModal('modal-chart')">×</button></div>
+    <div class="modal-header"><h3 id="chart-modal-title">Biểu Đồ</h3><button class="modal-close" onclick="closeModal('modal-chart')">×</button></div>
     <div class="modal-body">
       <div class="chart-tabs">
         <button class="chart-tab active" onclick="switchChart('bar')">📊 Cột</button>
@@ -515,7 +516,7 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
   <div class="modal" style="max-width:440px">
     <div class="modal-header"><h3>🎉 Phần Thưởng!</h3><button class="modal-close" onclick="closeModal('modal-reward')">×</button></div>
     <div class="modal-body">
-      <p style="color:var(--text2);font-size:14px;margin-bottom:16px">Đây là mã phần thưởng cho lựa chọn của bạn:</p>
+      <p style="color:var(--text2);font-size:14px;margin-bottom:16px">Mã phần thưởng cho lựa chọn của bạn:</p>
       <div style="font-size:13px;color:var(--text2);margin-bottom:8px">Lựa chọn: <b id="modal-reward-option" style="color:var(--text)">—</b></div>
       <div class="reward-box">
         <div class="reward-label">✦ Mã Phần Thưởng</div>
@@ -551,230 +552,258 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
   </div>
 </div>
 
+<!-- ROBLOX LINK MODAL -->
+<div class="modal-overlay" id="modal-roblox">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <h3>🎮 Liên Kết Tài Khoản Roblox</h3>
+      <button class="modal-close" onclick="closeModal('modal-roblox')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg">
+        <label>Tìm kiếm tên tài khoản Roblox</label>
+        <div class="rblx-search-wrap">
+          <input type="text" id="rblx-search-input" placeholder="Nhập username hoặc display name..." oninput="debounceRobloxSearch()" autocomplete="off">
+          <div class="rblx-results" id="rblx-results" style="display:none"></div>
+        </div>
+      </div>
+      <div id="rblx-selected-preview" style="display:none">
+        <div style="font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Tài khoản đã chọn:</div>
+        <div class="roblox-card">
+          <div class="roblox-avatar"><img id="rblx-prev-avatar" src="" alt=""></div>
+          <div class="roblox-info">
+            <div class="roblox-name" id="rblx-prev-name">—</div>
+            <div class="roblox-disp" id="rblx-prev-disp">—</div>
+            <div class="roblox-id" id="rblx-prev-id">ID: —</div>
+          </div>
+        </div>
+        <button class="btn btn-roblox btn-full" onclick="confirmLinkRoblox()">✓ Liên Kết Tài Khoản Này</button>
+      </div>
+      <p style="font-size:12px;color:var(--text3);margin-top:14px;text-align:center">Sau khi liên kết, bạn sẽ nhận badge ✅ Verified Roblox và có thể bình luận trong các poll.</p>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT PROFILE MODAL -->
+<div class="modal-overlay" id="modal-edit-profile">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header"><h3>✏️ Chỉnh Sửa Hồ Sơ</h3><button class="modal-close" onclick="closeModal('modal-edit-profile')">×</button></div>
+    <div class="modal-body">
+      <!-- Avatar -->
+      <div style="margin-bottom:20px">
+        <div style="font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Ảnh Đại Diện</div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="position:relative">
+            <div class="profile-avatar-lg" id="edit-avatar-preview" style="width:60px;height:60px;font-size:20px">?</div>
+          </div>
+          <div style="flex:1">
+            <div class="img-upload-box" onclick="document.getElementById('edit-avatar-file').click()" id="edit-avatar-dropzone">
+              <div style="font-size:24px;margin-bottom:4px">📷</div>
+              <div style="font-size:12px;color:var(--text2)">Tải ảnh lên hoặc nhập URL</div>
+              <input type="file" id="edit-avatar-file" accept="image/*" onchange="handleAvatarUpload(this)">
+            </div>
+            <div class="img-input-row">
+              <input type="text" id="edit-avatar-url" placeholder="https://... hoặc paste URL ảnh" oninput="previewAvatarUrl()">
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Cover -->
+      <div style="margin-bottom:20px">
+        <div style="font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Ảnh Bìa</div>
+        <div class="img-upload-box" onclick="document.getElementById('edit-cover-file').click()" style="padding:10px">
+          <img id="edit-cover-preview" style="display:none;width:100%;height:80px;object-fit:cover;border-radius:6px;margin-bottom:6px">
+          <div id="edit-cover-placeholder" style="font-size:13px;color:var(--text2)">📸 Tải ảnh bìa lên</div>
+          <input type="file" id="edit-cover-file" accept="image/*" onchange="handleCoverUpload(this)">
+        </div>
+        <div class="img-input-row" style="margin-top:6px">
+          <input type="text" id="edit-cover-url" placeholder="https://... URL ảnh bìa" oninput="previewCoverUrl()">
+        </div>
+      </div>
+      <!-- Display name -->
+      <div class="fg">
+        <label>Tên Hiển Thị</label>
+        <input type="text" id="edit-display-name" placeholder="Tên hiển thị trên profile...">
+      </div>
+      <!-- Bio -->
+      <div class="fg">
+        <label>Giới Thiệu</label>
+        <textarea id="edit-bio" placeholder="Viết vài dòng giới thiệu về bản thân..." style="min-height:70px"></textarea>
+      </div>
+      <!-- Avatar frame -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Khung Avatar</div>
+        <div class="frame-selector" id="frame-selector"></div>
+      </div>
+      <!-- Title -->
+      <div style="margin-bottom:20px">
+        <div style="font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Danh Hiệu</div>
+        <div class="title-selector" id="title-selector"></div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="saveProfile()">💾 Lưu Hồ Sơ</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-stack" id="toast-stack"></div>
 
 <script>
 // ════════════════════════════════════════════════════════════════
 // STORAGE ADAPTER
 // ════════════════════════════════════════════════════════════════
-const LS_PREFIX  = 'ntz_';
-const K_SESSION  = 'ntz_session_v4';
-const K_ANON     = 'ntz_anon';
+const LS_PREFIX='ntz_', K_SESSION='ntz_session_v5', K_ANON='ntz_anon';
+function lsGet(k){try{return JSON.parse(localStorage.getItem(k));}catch{return null;}}
+function lsSet(k,v){localStorage.setItem(k,JSON.stringify(v));}
+function lsDel(k){localStorage.removeItem(k);}
 
-function lsGet(key)      { try{return JSON.parse(localStorage.getItem(key));}catch{return null;} }
-function lsSet(key,val)  { localStorage.setItem(key, JSON.stringify(val)); }
-function lsDel(key)      { localStorage.removeItem(key); }
-
-const DB = {
-  async get(path) {
-    if (window._useFirebase) {
-      const snap = await window._fbGet(window._fbRef(path));
-      return snap.exists() ? snap.val() : null;
-    }
+const DB={
+  async get(path){
+    if(window._useFirebase){const s=await window._fbGet(window._fbRef(path));return s.exists()?s.val():null;}
     return lsGetPath(path);
   },
-  async set(path, val) {
-    if (window._useFirebase) {
-      await window._fbSet(window._fbRef(path), val);
-    } else {
-      lsSetPath(path, val);
-      notifyListeners(path);
+  async set(path,val){
+    if(window._useFirebase) await window._fbSet(window._fbRef(path),val);
+    else{lsSetPath(path,val);notifyListeners(path);}
+  },
+  async update(updates){
+    if(window._useFirebase) await window._fbUpdate(updates);
+    else{
+      for(const[p,v]of Object.entries(updates)){if(v===null)lsDelPath(p);else lsSetPath(p,v);}
+      const tops=new Set(Object.keys(updates).map(p=>p.split('/')[0]));
+      tops.forEach(t=>notifyListeners(t));
     }
   },
-  async update(updates) {
-    if (window._useFirebase) {
-      await window._fbUpdate(updates);
-    } else {
-      for (const [path, val] of Object.entries(updates)) {
-        if (val === null) lsDelPath(path);
-        else lsSetPath(path, val);
-      }
-      const tops = new Set(Object.keys(updates).map(p=>p.split('/')[0]));
-      tops.forEach(t => notifyListeners(t));
-    }
+  async remove(path){
+    if(window._useFirebase) await window._fbRemove(window._fbRef(path));
+    else{lsDelPath(path);notifyListeners(path.split('/')[0]);}
   },
-  async remove(path) {
-    if (window._useFirebase) {
-      await window._fbRemove(window._fbRef(path));
-    } else {
-      lsDelPath(path);
-      notifyListeners(path.split('/')[0]);
-    }
-  },
-  listen(path, cb) {
-    if (window._useFirebase) {
-      return window._fbOnValue(window._fbRef(path), cb);
-    } else {
-      const key = path.split('/')[0];
-      if (!localListeners[key]) localListeners[key] = [];
-      const handler = () => cb(lsGetPath(path));
-      localListeners[key].push(handler);
-      cb(lsGetPath(path));
-      return () => {
-        localListeners[key] = localListeners[key].filter(h=>h!==handler);
-      };
-    }
+  listen(path,cb){
+    if(window._useFirebase) return window._fbOnValue(window._fbRef(path),cb);
+    const key=path.split('/')[0];
+    if(!localListeners[key]) localListeners[key]=[];
+    const handler=()=>cb(lsGetPath(path));
+    localListeners[key].push(handler);
+    cb(lsGetPath(path));
+    return()=>{localListeners[key]=localListeners[key].filter(h=>h!==handler);};
   }
 };
 
-function lsGetPath(path) {
-  const parts = path.split('/').filter(Boolean);
-  const root = lsGet(LS_PREFIX + parts[0]) || {};
-  if (parts.length === 1) return root;
-  let cur = root;
-  for (let i=1;i<parts.length;i++) {
-    if (cur == null) return null;
-    cur = cur[parts[i]];
-  }
-  return cur ?? null;
+function lsGetPath(path){
+  const parts=path.split('/').filter(Boolean);
+  const root=lsGet(LS_PREFIX+parts[0])||{};
+  if(parts.length===1) return root;
+  let cur=root;
+  for(let i=1;i<parts.length;i++){if(cur==null)return null;cur=cur[parts[i]];}
+  return cur??null;
 }
-
-function lsSetPath(path, val) {
-  const parts = path.split('/').filter(Boolean);
-  if (parts.length === 1) { lsSet(LS_PREFIX + parts[0], val); return; }
-  const root = lsGet(LS_PREFIX + parts[0]) || {};
-  let cur = root;
-  for (let i=1;i<parts.length-1;i++) {
-    if (cur[parts[i]] == null) cur[parts[i]] = {};
-    cur = cur[parts[i]];
-  }
-  cur[parts[parts.length-1]] = val;
-  lsSet(LS_PREFIX + parts[0], root);
+function lsSetPath(path,val){
+  const parts=path.split('/').filter(Boolean);
+  if(parts.length===1){lsSet(LS_PREFIX+parts[0],val);return;}
+  const root=lsGet(LS_PREFIX+parts[0])||{};
+  let cur=root;
+  for(let i=1;i<parts.length-1;i++){if(cur[parts[i]]==null)cur[parts[i]]={};cur=cur[parts[i]];}
+  cur[parts[parts.length-1]]=val;
+  lsSet(LS_PREFIX+parts[0],root);
 }
-
-function lsDelPath(path) {
-  const parts = path.split('/').filter(Boolean);
-  if (parts.length === 1) { lsDel(LS_PREFIX + parts[0]); return; }
-  const root = lsGet(LS_PREFIX + parts[0]);
-  if (!root) return;
-  let cur = root;
-  for (let i=1;i<parts.length-1;i++) {
-    if (!cur[parts[i]]) return;
-    cur = cur[parts[i]];
-  }
+function lsDelPath(path){
+  const parts=path.split('/').filter(Boolean);
+  if(parts.length===1){lsDel(LS_PREFIX+parts[0]);return;}
+  const root=lsGet(LS_PREFIX+parts[0]);
+  if(!root)return;
+  let cur=root;
+  for(let i=1;i<parts.length-1;i++){if(!cur[parts[i]])return;cur=cur[parts[i]];}
   delete cur[parts[parts.length-1]];
-  lsSet(LS_PREFIX + parts[0], root);
+  lsSet(LS_PREFIX+parts[0],root);
 }
+const localListeners={};
+function notifyListeners(k){(localListeners[k]||[]).forEach(h=>h());}
 
-const localListeners = {};
-function notifyListeners(topKey) {
-  (localListeners[topKey] || []).forEach(h => h());
-}
+// ════════════════════════════════════════════════════════════════
+// AVATAR FRAMES & TITLES
+// ════════════════════════════════════════════════════════════════
+const AVATAR_FRAMES=[
+  {id:'none',name:'Không có',css:'none',emoji:'⚪'},
+  {id:'gold',name:'Vàng',css:'3px solid #f59e0b',emoji:'🟡'},
+  {id:'blue',name:'Xanh',css:'3px solid #4f8ef7',emoji:'🔵'},
+  {id:'purple',name:'Tím',css:'3px solid #a855f7',emoji:'🟣'},
+  {id:'green',name:'Xanh lá',css:'3px solid #10b981',emoji:'🟢'},
+  {id:'roblox',name:'Roblox',css:'3px solid #00b2ff',emoji:'🎮'},
+  {id:'red',name:'Đỏ',css:'3px solid #ef4444',emoji:'🔴'},
+  {id:'rainbow',name:'Cầu vồng',css:'3px solid transparent',emoji:'🌈'},
+];
+
+const TITLES=[
+  {id:'none',name:'Không có',color:'var(--text3)',emoji:''},
+  {id:'voter',name:'Voter Tích Cực',color:'var(--primary)',emoji:'🗳'},
+  {id:'robloxian',name:'Robloxian',color:'var(--roblox)',emoji:'🎮'},
+  {id:'veteran',name:'Cựu Chiến Binh',color:'var(--yellow)',emoji:'⭐'},
+  {id:'admin',name:'Admin',color:'var(--red)',emoji:'👑'},
+  {id:'verified',name:'Đã Xác Minh',color:'var(--green)',emoji:'✅'},
+];
 
 // ════════════════════════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════════════════════════
-let currentUser  = null;
-let isAnon       = false;
-let allPolls     = {};
-let myVotes      = {};
-let appSettings  = {};
-let unsubPolls   = null;
-let unsubVotes   = null;
-let unsubSettings = null;
-
-// ✅ FIX 6: Debounce cho vote để tránh spam / race condition
-let voteInProgress = new Set();
-
-const isAdmin    = () => currentUser?.role === 'admin';
-const isLoggedIn = () => !!currentUser;
+let currentUser=null, isAnon=false, allPolls={}, myVotes={}, appSettings={};
+let unsubPolls=null, unsubVotes=null, unsubSettings=null;
+let voteInProgress=new Set();
+const isAdmin=()=>currentUser?.role==='admin';
+const isLoggedIn=()=>!!currentUser;
 
 // ════════════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════════════
-window.addEventListener('storage-ready', async (e) => {
-  const usingFirebase = e.detail.firebase;
-  document.getElementById('connecting-msg').textContent = usingFirebase
-    ? 'Đang kết nối Firebase...'
-    : 'Khởi động chế độ offline...';
-
-  const badgeEl = document.getElementById('storage-mode-badge');
-  if (badgeEl) {
-    badgeEl.innerHTML = usingFirebase
-      ? '<span class="mode-badge mode-firebase">🔥 Firebase</span>'
-      : '<span class="mode-badge mode-local">💾 Local</span>';
-  }
-  const rtEl = document.getElementById('realtime-label');
-  if (rtEl) {
-    if (usingFirebase) rtEl.innerHTML = '<div class="live-dot"></div><span style="color:var(--green)">Real-time</span>';
-    else rtEl.innerHTML = '<span style="color:var(--text3)">💾 Offline Mode</span>';
-  }
-
+window.addEventListener('storage-ready',async(e)=>{
+  const usingFirebase=e.detail.firebase;
+  document.getElementById('connecting-msg').textContent=usingFirebase?'Đang kết nối Firebase...':'Khởi động offline...';
+  const badgeEl=document.getElementById('storage-mode-badge');
+  if(badgeEl) badgeEl.innerHTML=usingFirebase?'<span class="mode-badge mode-firebase">🔥 Firebase</span>':'<span class="mode-badge mode-local">💾 Local</span>';
+  const rtEl=document.getElementById('realtime-label');
+  if(rtEl) rtEl.innerHTML=usingFirebase?'<div class="live-dot"></div><span style="color:var(--green)">Real-time</span>':'<span style="color:var(--text3)">💾 Offline</span>';
   await seedAdmin();
   await loadAppSettings();
-
-  try { currentUser = JSON.parse(localStorage.getItem(K_SESSION)); } catch {}
-  if (currentUser) {
-    const u = await DB.get(`users/${currentUser.username}`);
-    if (!u) { currentUser = null; localStorage.removeItem(K_SESSION); }
-    else currentUser = u;
+  try{currentUser=JSON.parse(localStorage.getItem(K_SESSION));}catch{}
+  if(currentUser){
+    const u=await DB.get(`users/${currentUser.username}`);
+    if(!u){currentUser=null;localStorage.removeItem(K_SESSION);}
+    else currentUser=u;
   }
-  isAnon = !!localStorage.getItem(K_ANON);
-
+  isAnon=!!localStorage.getItem(K_ANON);
   document.getElementById('connecting-overlay').classList.add('hidden');
   applyAppSettings();
   renderTopbar();
-
-  if (currentUser || isAnon) {
-    showPage('page-main');
-    startListeners();
-    setView('polls');
-  } else {
-    showPage('page-landing');
-  }
+  if(currentUser||isAnon){showPage('page-main');startListeners();setView('polls');}
+  else showPage('page-landing');
 });
 
-// ════════════════════════════════════════════════════════════════
-// SEED ADMIN — ✅ FIX 7: Hash mật khẩu admin khi seed
-// ════════════════════════════════════════════════════════════════
-async function seedAdmin() {
-  const existing = await DB.get('users/atnoob303');
-  if (!existing) {
-    const hashedPw = await hashPassword('banbe012@');
-    await DB.set('users/atnoob303', {
-      username:'atnoob303',
-      password: hashedPw,
-      email:'', role:'admin',
-      createdAt: new Date().toISOString()
-    });
-  }
-  // ✅ Migration: nếu admin cũ lưu plaintext thì migrate luôn
-  else if (existing.password === 'banbe012@') {
-    const hashedPw = await hashPassword('banbe012@');
-    await DB.update({ 'users/atnoob303/password': hashedPw });
-    if (currentUser?.username === 'atnoob303') {
-      currentUser.password = hashedPw;
-      localStorage.setItem(K_SESSION, JSON.stringify(currentUser));
-    }
+async function seedAdmin(){
+  const existing=await DB.get('users/atnoob303');
+  if(!existing){
+    const hashedPw=await hashPassword('banbe012@');
+    await DB.set('users/atnoob303',{username:'atnoob303',password:hashedPw,email:'',role:'admin',createdAt:new Date().toISOString(),profile:{displayName:'atnoob303',bio:'',avatarUrl:'',coverUrl:'',frameId:'gold',titleId:'admin'}});
+  } else if(existing.password==='banbe012@'){
+    const hashedPw=await hashPassword('banbe012@');
+    await DB.update({'users/atnoob303/password':hashedPw});
   }
 }
 
 // ════════════════════════════════════════════════════════════════
 // APP SETTINGS
 // ════════════════════════════════════════════════════════════════
-const DEFAULT_SETTINGS = {
-  appName:'NTZ VOTTING HUB', appVersion:'v4.1', appUpdate:'UPDATE',
-  logoUrl:'', primaryColor:'#4f8ef7',
-  bgImageUrl:'', bgBlur:0, bgOpacity:0.05,
-};
-
-async function loadAppSettings() {
-  const s = await DB.get('appSettings');
-  appSettings = s ? { ...DEFAULT_SETTINGS, ...s } : { ...DEFAULT_SETTINGS };
-}
-
-function applyAppSettings() {
-  const s = appSettings;
-  document.documentElement.style.setProperty('--primary', s.primaryColor||'#4f8ef7');
+const DEFAULT_SETTINGS={appName:'NTZ VOTTING HUB',appVersion:'v5.0',appUpdate:'UPDATE',logoUrl:'',primaryColor:'#4f8ef7',bgImageUrl:'',bgBlur:0,bgOpacity:0.05};
+async function loadAppSettings(){const s=await DB.get('appSettings');appSettings=s?{...DEFAULT_SETTINGS,...s}:{...DEFAULT_SETTINGS};}
+function applyAppSettings(){
+  const s=appSettings;
+  document.documentElement.style.setProperty('--primary',s.primaryColor||'#4f8ef7');
   const hex=s.primaryColor||'#4f8ef7';
   const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
   document.documentElement.style.setProperty('--primary-dim',`rgba(${r},${g},${b},0.15)`);
   const logoEl=document.getElementById('logo-icon-el');
-  if(logoEl){logoEl.innerHTML=s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="logo" onerror="this.parentElement.textContent='NV'">`:'NV';}
+  if(logoEl) logoEl.innerHTML=s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="logo" onerror="this.parentElement.textContent='NV'">`:'NV';
   const nameEl=document.getElementById('logo-text-el');
   if(nameEl&&s.appName){const p=s.appName.split(' ');nameEl.innerHTML=p.length>=2?`${esc(p[0])} <span>${esc(p.slice(1).join(' '))}</span>`:`<span>${esc(s.appName)}</span>`;}
   const badgeEl=document.getElementById('logo-badge-el');
-  if(badgeEl) badgeEl.textContent=`${s.appUpdate||'UPDATE'} ✦ ${s.appVersion||'v4.1'}`;
+  if(badgeEl) badgeEl.textContent=`${s.appUpdate||'UPDATE'} ✦ ${s.appVersion||'v5.0'}`;
   document.title=s.appName||'NTZ VOTTING HUB';
   const lt=document.getElementById('landing-title');
   if(lt) lt.textContent=s.appName||'NTZ VOTTING HUB';
@@ -784,152 +813,124 @@ function applyAppSettings() {
     else{bgLayer.style.backgroundImage='';bgLayer.style.opacity=0;}
   }
 }
-
-async function saveAppSettings() {
-  await DB.set('appSettings', appSettings);
-  applyAppSettings();
-}
+async function saveAppSettings(){await DB.set('appSettings',appSettings);applyAppSettings();}
 
 // ════════════════════════════════════════════════════════════════
 // LISTENERS
 // ════════════════════════════════════════════════════════════════
-function startListeners() {
+function startListeners(){
   if(unsubPolls) unsubPolls();
-  unsubPolls = DB.listen('polls', data => {
-    allPolls = data || {};
+  unsubPolls=DB.listen('polls',data=>{
+    allPolls=data||{};
     const v=getCurrentView();
-    if(v==='polls')   renderPolls();
+    if(v==='polls') renderPolls();
     if(v==='myvotes') renderMyVotes();
     renderStats();
-    if(currentChartPollId && document.getElementById('modal-chart').classList.contains('open')) drawChart(currentChartType);
+    if(currentChartPollId&&document.getElementById('modal-chart').classList.contains('open')) drawChart(currentChartType);
   });
-
   if(unsubSettings) unsubSettings();
-  unsubSettings = DB.listen('appSettings', data => {
-    appSettings = {...DEFAULT_SETTINGS,...(data||{})};
-    applyAppSettings();
-  });
-
-  if(currentUser) {
+  unsubSettings=DB.listen('appSettings',data=>{appSettings={...DEFAULT_SETTINGS,...(data||{})};applyAppSettings();});
+  if(currentUser){
     if(unsubVotes) unsubVotes();
-    unsubVotes = DB.listen(`votes/${currentUser.username}`, data => {
-      myVotes = data || {};
+    unsubVotes=DB.listen(`votes/${currentUser.username}`,data=>{
+      myVotes=data||{};
       const v=getCurrentView();
-      if(v==='polls')   renderPolls();
+      if(v==='polls') renderPolls();
       if(v==='myvotes') renderMyVotes();
       renderStats();
     });
   }
 }
-
-function stopListeners() {
-  [unsubPolls,unsubVotes,unsubSettings].forEach(u=>u&&u());
-  unsubPolls=unsubVotes=unsubSettings=null;
-}
-
-function getCurrentView() {
-  for(const v of ['polls','myvotes','profile','create','settings']){
+function stopListeners(){[unsubPolls,unsubVotes,unsubSettings].forEach(u=>u&&u());unsubPolls=unsubVotes=unsubSettings=null;}
+function getCurrentView(){
+  for(const v of['polls','myvotes','profile','create','settings']){
     const el=document.getElementById('view-'+v);
-    if(el && el.style.display!=='none') return v;
+    if(el&&el.style.display!=='none') return v;
   }
   return 'polls';
 }
 
 // ════════════════════════════════════════════════════════════════
-// ANONYMOUS
+// AUTH
 // ════════════════════════════════════════════════════════════════
-function enterAnonymous() {
-  isAnon=true; localStorage.setItem(K_ANON,'1');
-  showPage('page-main'); renderTopbar(); startListeners(); setView('polls');
-  toast('👻 Đang xem ẩn danh — đăng nhập để vote','t-info');
-}
-
-// ════════════════════════════════════════════════════════════════
-// AUTH — ✅ FIX 8: Hash password khi login/register
-// ════════════════════════════════════════════════════════════════
-function switchAuthTab(tab) {
+function enterAnonymous(){isAnon=true;localStorage.setItem(K_ANON,'1');showPage('page-main');renderTopbar();startListeners();setView('polls');toast('👻 Đang xem ẩn danh','t-info');}
+function switchAuthTab(tab){
   document.getElementById('tab-login').classList.toggle('active',tab==='login');
   document.getElementById('tab-register').classList.toggle('active',tab==='register');
-  document.getElementById('form-login').style.display    = tab==='login'?'':'none';
-  document.getElementById('form-register').style.display = tab==='register'?'':'none';
+  document.getElementById('form-login').style.display=tab==='login'?'':'none';
+  document.getElementById('form-register').style.display=tab==='register'?'':'none';
 }
-
-async function doLogin() {
-  const btn = document.getElementById('btn-login');
+async function doLogin(){
+  const btn=document.getElementById('btn-login');
   const un=document.getElementById('l-username').value.trim();
   const pw=document.getElementById('l-password').value;
   const err=document.getElementById('l-err');
-  if(!un||!pw) { err.classList.add('show'); return; }
-
-  btn.disabled = true; btn.textContent = 'Đang đăng nhập...';
-  try {
-    const u = await DB.get(`users/${un}`);
-    if(!u){ err.classList.add('show'); return; }
-
-    // So sánh hash
-    const hashedInput = await hashPassword(pw);
-    if(u.password !== hashedInput){ err.classList.add('show'); return; }
-
+  if(!un||!pw){err.classList.add('show');return;}
+  btn.disabled=true;btn.textContent='Đang đăng nhập...';
+  try{
+    const u=await DB.get(`users/${un}`);
+    if(!u){err.classList.add('show');return;}
+    const hashedInput=await hashPassword(pw);
+    if(u.password!==hashedInput){err.classList.add('show');return;}
     err.classList.remove('show');
-    currentUser=u; isAnon=false;
+    currentUser=u;isAnon=false;
     localStorage.setItem(K_SESSION,JSON.stringify(currentUser));
     localStorage.removeItem(K_ANON);
     onLogin();
-  } catch(e){ toast('Lỗi kết nối!','t-error'); }
-  finally { btn.disabled = false; btn.textContent = 'Đăng Nhập'; }
+  }catch(e){toast('Lỗi kết nối!','t-error');}
+  finally{btn.disabled=false;btn.textContent='Đăng Nhập';}
 }
-
-async function doRegister() {
-  const btn = document.getElementById('btn-register');
+async function doRegister(){
+  const btn=document.getElementById('btn-register');
   const un=document.getElementById('r-username').value.trim();
   const em=document.getElementById('r-email').value.trim();
   const pw=document.getElementById('r-password').value;
   const cf=document.getElementById('r-confirm').value;
   const err=document.getElementById('r-err');
-  if(!un)                               {showErr(err,'Vui lòng nhập tên đăng nhập!');return;}
-  if(!/^[a-zA-Z0-9_]{3,20}$/.test(un)) {showErr(err,'Tên đăng nhập 3-20 ký tự, không dấu, không cách!');return;}
-  if(pw.length<6)                       {showErr(err,'Mật khẩu ít nhất 6 ký tự!');return;}
-  if(pw!==cf)                           {showErr(err,'Mật khẩu xác nhận không khớp!');return;}
-
-  btn.disabled = true; btn.textContent = 'Đang tạo tài khoản...';
-  try {
-    const existing = await DB.get(`users/${un}`);
+  if(!un){showErr(err,'Vui lòng nhập tên đăng nhập!');return;}
+  if(!/^[a-zA-Z0-9_]{3,20}$/.test(un)){showErr(err,'Tên đăng nhập 3-20 ký tự, không dấu, không cách!');return;}
+  if(pw.length<6){showErr(err,'Mật khẩu ít nhất 6 ký tự!');return;}
+  if(pw!==cf){showErr(err,'Mật khẩu xác nhận không khớp!');return;}
+  btn.disabled=true;btn.textContent='Đang tạo...';
+  try{
+    const existing=await DB.get(`users/${un}`);
     if(existing){showErr(err,'Tên đăng nhập đã tồn tại!');return;}
-
-    const hashedPw = await hashPassword(pw);
-    const newUser={username:un, password:hashedPw, email:em, role:'user', createdAt:new Date().toISOString()};
+    const hashedPw=await hashPassword(pw);
+    const newUser={username:un,password:hashedPw,email:em,role:'user',createdAt:new Date().toISOString(),profile:{displayName:un,bio:'',avatarUrl:'',coverUrl:'',frameId:'none',titleId:'none'}};
     await DB.set(`users/${un}`,newUser);
-    currentUser=newUser; isAnon=false;
+    currentUser=newUser;isAnon=false;
     localStorage.setItem(K_SESSION,JSON.stringify(newUser));
     localStorage.removeItem(K_ANON);
     err.classList.remove('show');
     onLogin();
-  } catch(e){ toast('Lỗi!','t-error'); }
-  finally { btn.disabled = false; btn.textContent = 'Tạo Tài Khoản'; }
+  }catch(e){toast('Lỗi!','t-error');}
+  finally{btn.disabled=false;btn.textContent='Tạo Tài Khoản';}
 }
-
 function showErr(el,msg){el.textContent=msg;el.classList.add('show');}
-
-function logout() {
-  stopListeners();
-  currentUser=null; isAnon=false; myVotes={}; allPolls={};
-  localStorage.removeItem(K_SESSION); localStorage.removeItem(K_ANON);
-  showPage('page-landing'); renderTopbar();
-}
-
-function onLogin() {
-  showPage('page-main'); renderTopbar(); startListeners(); setView('polls');
-  toast('Chào mừng, '+currentUser.username+'! 👋','t-success');
-}
-
-function goHome() {
-  if(currentUser||isAnon) setView('polls'); else showPage('page-landing');
-}
+function logout(){stopListeners();currentUser=null;isAnon=false;myVotes={};allPolls={};localStorage.removeItem(K_SESSION);localStorage.removeItem(K_ANON);showPage('page-landing');renderTopbar();}
+function onLogin(){showPage('page-main');renderTopbar();startListeners();setView('polls');toast('Chào mừng, '+currentUser.username+'! 👋','t-success');}
+function goHome(){if(currentUser||isAnon)setView('polls');else showPage('page-landing');}
 
 // ════════════════════════════════════════════════════════════════
 // TOPBAR
 // ════════════════════════════════════════════════════════════════
-function renderTopbar() {
+function getAvatarHtml(user,size=26){
+  const profile=user?.profile||{};
+  const frameId=profile.frameId||'none';
+  const frame=AVATAR_FRAMES.find(f=>f.id===frameId);
+  const borderStyle=frame?.id==='rainbow'?'border:3px solid transparent;background-clip:padding-box':'';
+  if(profile.avatarUrl){
+    return `<div style="position:relative;width:${size}px;height:${size}px;flex-shrink:0">
+      <img src="${esc(profile.avatarUrl)}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;border:${frame?.css||'none'};${frame?.id==='rainbow'?'outline:2px solid transparent':''}">
+    </div>`;
+  }
+  const bg=user?.role==='admin'?'linear-gradient(135deg,#f59e0b,#ef4444)':'linear-gradient(135deg,var(--primary),var(--secondary))';
+  return `<div style="position:relative;width:${size}px;height:${size}px;flex-shrink:0">
+    <div style="width:${size}px;height:${size}px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*.45)}px;font-weight:700;color:#fff;border:${frame?.css||'none'}">${user?.username?.[0]?.toUpperCase()||'?'}</div>
+  </div>`;
+}
+
+function renderTopbar(){
   const el=document.getElementById('topbar-right');
   if(!currentUser&&!isAnon){el.innerHTML='';return;}
   if(isAnon){
@@ -940,11 +941,13 @@ function renderTopbar() {
     </div>`;return;
   }
   const isAd=isAdmin();
+  const profile=currentUser.profile||{};
   el.innerHTML=`<div style="display:flex;align-items:center;gap:8px">
     <div class="user-pill" onclick="setView('profile')">
-      <div class="avatar ${isAd?'admin-av':''}">${currentUser.username[0].toUpperCase()}</div>
-      <span style="font-size:13px;font-weight:600">${esc(currentUser.username)}</span>
-      ${isAd?'<span style="font-size:10px;background:rgba(245,158,11,.15);color:var(--yellow);border:1px solid rgba(245,158,11,.3);border-radius:999px;padding:1px 7px;margin-left:2px">ADMIN</span>':''}
+      ${getAvatarHtml(currentUser,26)}
+      <span style="font-size:13px;font-weight:600">${esc(profile.displayName||currentUser.username)}</span>
+      ${currentUser.roblox?`<span class="verified-shield">🎮 RBX</span>`:''}
+      ${isAd?'<span style="font-size:10px;background:rgba(245,158,11,.15);color:var(--yellow);border:1px solid rgba(245,158,11,.3);border-radius:999px;padding:1px 7px">ADMIN</span>':''}
     </div>
     <button class="nav-btn" onclick="logout()">Đăng Xuất</button>
   </div>`;
@@ -953,166 +956,468 @@ function renderTopbar() {
 // ════════════════════════════════════════════════════════════════
 // PAGE / VIEW
 // ════════════════════════════════════════════════════════════════
-function showPage(id) {
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-
-function setView(v) {
+function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function setView(v){
   ['polls','myvotes','profile','create','settings'].forEach(n=>{
-    const el=document.getElementById('view-'+n); if(el) el.style.display=n===v?'':'none';
-    const nl=document.getElementById('nl-'+n); if(nl) nl.classList.toggle('active',n===v);
+    const el=document.getElementById('view-'+n);if(el)el.style.display=n===v?'':'none';
+    const nl=document.getElementById('nl-'+n);if(nl)nl.classList.toggle('active',n===v);
   });
   if(isAdmin()) document.getElementById('admin-nav').style.display='';
   else document.getElementById('admin-nav').style.display='none';
-  const mvEl=document.getElementById('nl-myvotes'); if(mvEl) mvEl.style.display=isAnon?'none':'';
-  if(v==='polls')    renderPolls();
-  if(v==='myvotes')  renderMyVotes();
-  if(v==='profile')  renderProfile();
-  if(v==='create')   initCreateForm();
+  const mvEl=document.getElementById('nl-myvotes');if(mvEl)mvEl.style.display=isAnon?'none':'';
+  if(v==='polls') renderPolls();
+  if(v==='myvotes') renderMyVotes();
+  if(v==='profile') renderProfile();
+  if(v==='create') initCreateForm();
   if(v==='settings') renderSettings();
 }
 
 // ════════════════════════════════════════════════════════════════
 // STATS
 // ════════════════════════════════════════════════════════════════
-function renderStats() {
-  const polls=Object.values(allPolls), now=new Date();
-  document.getElementById('stat-total').textContent   = polls.length;
-  document.getElementById('stat-live').textContent    = polls.filter(p=>new Date(p.endTime)>now).length;
-  document.getElementById('stat-ended').textContent   = polls.filter(p=>new Date(p.endTime)<=now).length;
-  document.getElementById('stat-myvotes').textContent = Object.keys(myVotes).length;
+function renderStats(){
+  const polls=Object.values(allPolls),now=new Date();
+  document.getElementById('stat-total').textContent=polls.length;
+  document.getElementById('stat-live').textContent=polls.filter(p=>new Date(p.endTime)>now).length;
+  document.getElementById('stat-ended').textContent=polls.filter(p=>new Date(p.endTime)<=now).length;
+  document.getElementById('stat-myvotes').textContent=Object.keys(myVotes).length;
+}
+
+// ════════════════════════════════════════════════════════════════
+// ROBLOX API
+// ════════════════════════════════════════════════════════════════
+let rblxSearchTimer=null;
+let selectedRobloxAccount=null;
+
+function debounceRobloxSearch(){
+  clearTimeout(rblxSearchTimer);
+  rblxSearchTimer=setTimeout(doRobloxSearch,500);
+}
+
+async function doRobloxSearch(){
+  const q=document.getElementById('rblx-search-input')?.value.trim();
+  const resultsEl=document.getElementById('rblx-results');
+  if(!q||q.length<2){if(resultsEl)resultsEl.style.display='none';return;}
+  if(resultsEl){resultsEl.style.display='block';resultsEl.innerHTML='<div style="padding:12px;text-align:center;color:var(--text3);font-size:13px">🔍 Đang tìm kiếm...</div>';}
+  try{
+    // Search by username
+    const resp=await fetch(`https://users.roblox.com/v1/users/search?keyword=${encodeURIComponent(q)}&limit=10`);
+    if(!resp.ok) throw new Error('API error');
+    const data=await resp.json();
+    const users=data.data||[];
+    if(!users.length){
+      if(resultsEl) resultsEl.innerHTML='<div style="padding:12px;text-align:center;color:var(--text3);font-size:13px">Không tìm thấy tài khoản nào</div>';
+      return;
+    }
+    // Get thumbnails
+    const ids=users.map(u=>u.id).join(',');
+    let thumbs={};
+    try{
+      const tResp=await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${ids}&size=150x150&format=Png`);
+      const tData=await tResp.json();
+      (tData.data||[]).forEach(t=>{thumbs[t.targetId]=t.imageUrl;});
+    }catch{}
+    if(resultsEl){
+      resultsEl.innerHTML=users.map(u=>`
+        <div class="rblx-item" onclick="selectRobloxUser(${u.id},'${esc(u.name)}','${esc(u.displayName||u.name)}','${thumbs[u.id]||''}')">
+          <div class="rblx-item-avatar"><img src="${thumbs[u.id]||''}" alt="" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><rect width=%2240%22 height=%2240%22 fill=%22%2312121e%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 font-size=%2218%22>🎮</text></svg>'"></div>
+          <div>
+            <div class="rblx-item-name">${esc(u.name)}</div>
+            <div class="rblx-item-disp">${u.displayName&&u.displayName!==u.name?esc(u.displayName):''}</div>
+          </div>
+        </div>`).join('');
+    }
+  }catch(e){
+    if(resultsEl) resultsEl.innerHTML='<div style="padding:12px;text-align:center;color:var(--red);font-size:13px">Lỗi kết nối API Roblox</div>';
+  }
+}
+
+function selectRobloxUser(id,username,displayName,avatarUrl){
+  selectedRobloxAccount={id,username,displayName,avatarUrl};
+  document.getElementById('rblx-results').style.display='none';
+  document.getElementById('rblx-search-input').value=username;
+  document.getElementById('rblx-selected-preview').style.display='block';
+  document.getElementById('rblx-prev-avatar').src=avatarUrl;
+  document.getElementById('rblx-prev-name').textContent=username;
+  document.getElementById('rblx-prev-disp').textContent=displayName!==username?`Display: ${displayName}`:'';
+  document.getElementById('rblx-prev-id').textContent=`ID: ${id}`;
+}
+
+async function confirmLinkRoblox(){
+  if(!selectedRobloxAccount) return;
+  try{
+    await DB.update({
+      [`users/${currentUser.username}/roblox`]:selectedRobloxAccount,
+    });
+    currentUser.roblox=selectedRobloxAccount;
+    localStorage.setItem(K_SESSION,JSON.stringify(currentUser));
+    closeModal('modal-roblox');
+    renderTopbar();
+    renderProfile();
+    toast('🎮 Đã liên kết tài khoản Roblox!','t-success');
+    selectedRobloxAccount=null;
+  }catch(e){toast('Lỗi khi liên kết!','t-error');}
+}
+
+async function unlinkRoblox(){
+  if(!confirm('Gỡ liên kết tài khoản Roblox?')) return;
+  try{
+    await DB.update({[`users/${currentUser.username}/roblox`]:null});
+    delete currentUser.roblox;
+    localStorage.setItem(K_SESSION,JSON.stringify(currentUser));
+    renderTopbar();
+    renderProfile();
+    toast('Đã gỡ liên kết Roblox','t-info');
+  }catch(e){toast('Lỗi!','t-error');}
+}
+
+function openRobloxModal(){
+  selectedRobloxAccount=null;
+  const inp=document.getElementById('rblx-search-input');
+  if(inp) inp.value='';
+  const prev=document.getElementById('rblx-selected-preview');
+  if(prev) prev.style.display='none';
+  const res=document.getElementById('rblx-results');
+  if(res) res.style.display='none';
+  openModal('modal-roblox');
+}
+
+// ════════════════════════════════════════════════════════════════
+// IMAGE UPLOAD — ImgBB
+// ════════════════════════════════════════════════════════════════
+const IMGBB_KEY='5fbc05b535bbb4da817c8c53fd6e1f18'; // demo key — thay bằng key của bạn
+
+async function uploadToImgBB(file){
+  const formData=new FormData();
+  formData.append('image',file);
+  const resp=await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`,{method:'POST',body:formData});
+  const data=await resp.json();
+  if(data.success) return data.data.url;
+  throw new Error('Upload failed');
+}
+
+async function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    const reader=new FileReader();
+    reader.onload=e=>res(e.target.result);
+    reader.onerror=rej;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleAvatarUpload(input){
+  const file=input.files[0];if(!file)return;
+  toast('Đang tải ảnh...','t-info');
+  try{
+    let url;
+    try{url=await uploadToImgBB(file);}
+    catch{url=await fileToBase64(file);}
+    document.getElementById('edit-avatar-url').value=url;
+    previewAvatarUrl();
+    toast('✓ Ảnh đã sẵn sàng','t-success');
+  }catch(e){toast('Lỗi tải ảnh!','t-error');}
+}
+
+async function handleCoverUpload(input){
+  const file=input.files[0];if(!file)return;
+  toast('Đang tải ảnh bìa...','t-info');
+  try{
+    let url;
+    try{url=await uploadToImgBB(file);}
+    catch{url=await fileToBase64(file);}
+    document.getElementById('edit-cover-url').value=url;
+    previewCoverUrl();
+    toast('✓ Ảnh bìa đã sẵn sàng','t-success');
+  }catch(e){toast('Lỗi tải ảnh!','t-error');}
+}
+
+function previewAvatarUrl(){
+  const url=document.getElementById('edit-avatar-url')?.value.trim();
+  const prev=document.getElementById('edit-avatar-preview');
+  if(!prev)return;
+  if(url){prev.innerHTML=`<img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentElement.textContent='?'">`;}
+  else{prev.innerHTML=(currentUser?.username?.[0]?.toUpperCase()||'?');}
+}
+
+function previewCoverUrl(){
+  const url=document.getElementById('edit-cover-url')?.value.trim();
+  const prev=document.getElementById('edit-cover-preview');
+  const placeholder=document.getElementById('edit-cover-placeholder');
+  if(url&&prev){prev.src=url;prev.style.display='block';if(placeholder)placeholder.style.display='none';}
+  else if(prev){prev.style.display='none';if(placeholder)placeholder.style.display='block';}
+}
+
+// ════════════════════════════════════════════════════════════════
+// PROFILE
+// ════════════════════════════════════════════════════════════════
+function renderProfile(){
+  if(isAnon){
+    document.getElementById('profile-content').innerHTML=`
+      <div class="empty"><div class="empty-ico">👻</div><h3>Bạn đang ẩn danh</h3>
+      <p style="margin-bottom:20px">Đăng nhập để xem hồ sơ</p>
+      <button class="btn btn-primary" onclick="showPage('page-auth');switchAuthTab('login')">🔑 Đăng Nhập</button></div>`;
+    return;
+  }
+  if(!currentUser)return;
+  const profile=currentUser.profile||{};
+  const roblox=currentUser.roblox;
+  const isAd=isAdmin();
+  const polls=Object.values(allPolls);
+  const joinDate=new Date(currentUser.createdAt).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const frame=AVATAR_FRAMES.find(f=>f.id===(profile.frameId||'none'));
+  const title=TITLES.find(t=>t.id===(profile.titleId||'none'));
+  const avatarBig=profile.avatarUrl
+    ?`<img src="${esc(profile.avatarUrl)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`
+    :`<span>${currentUser.username[0].toUpperCase()}</span>`;
+  const coverStyle=profile.coverUrl?`background-image:url('${esc(profile.coverUrl)}')`:
+    'background:linear-gradient(135deg,var(--bg2),var(--bg3))';
+
+  document.getElementById('profile-content').innerHTML=`
+    <div class="anim">
+      <div style="border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:20px">
+        <div class="profile-cover" style="${coverStyle}">
+          <button class="btn btn-secondary btn-sm profile-cover-edit" onclick="openEditProfile()" style="font-size:12px">✏️ Chỉnh sửa</button>
+        </div>
+        <div class="profile-main">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <div class="profile-avatar-wrap">
+              <div class="profile-avatar-lg" style="border:${frame?.css||'none'}">${avatarBig}</div>
+              <div class="avatar-edit-btn" onclick="openEditProfile()">✏️</div>
+            </div>
+            <div style="display:flex;gap:8px;padding-bottom:4px;flex-wrap:wrap">
+              ${roblox
+                ?`<button class="btn btn-secondary btn-sm" onclick="openRobloxModal()">🔄 Đổi Roblox</button>
+                   <button class="btn btn-danger btn-sm" onclick="unlinkRoblox()">🗑 Gỡ Liên Kết</button>`
+                :`<button class="btn btn-roblox btn-sm" onclick="openRobloxModal()">🎮 Liên Kết Roblox</button>`}
+            </div>
+          </div>
+          <div class="profile-name-row">
+            <div class="profile-name">${esc(profile.displayName||currentUser.username)}</div>
+            <div class="profile-username">@${esc(currentUser.username)}</div>
+            ${isAd?'<div class="admin-crown">👑 Admin</div>':''}
+          </div>
+          ${title&&title.id!=='none'?`<div style="display:inline-flex;align-items:center;gap:5px;background:rgba(0,0,0,.2);border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:12px;color:${title.color};margin-bottom:8px">${title.emoji} ${esc(title.name)}</div>`:''}
+          ${profile.bio?`<div class="profile-bio">${esc(profile.bio)}</div>`:''}
+          <div class="profile-badges-row">
+            ${roblox?`<div class="verified-shield">✅ Verified Roblox</div>`:''}
+            ${isAd?`<span class="badge badge-yellow">👑 Admin</span>`:''}
+          </div>
+        </div>
+      </div>
+      ${roblox?`
+        <div class="roblox-card anim">
+          <div class="roblox-avatar"><img src="${esc(roblox.avatarUrl||'')}" alt="" onerror="this.parentElement.innerHTML='🎮'"></div>
+          <div class="roblox-info">
+            <div class="roblox-name">🎮 ${esc(roblox.username)}</div>
+            ${roblox.displayName&&roblox.displayName!==roblox.username?`<div class="roblox-disp">Display: ${esc(roblox.displayName)}</div>`:''}
+            <div class="roblox-id">ID: ${roblox.id}</div>
+          </div>
+          <div class="verified-shield">✅ Linked</div>
+        </div>`:''}
+      <div class="profile-stat-row">
+        <div class="stat-box"><div class="num" style="color:var(--secondary)">${Object.keys(myVotes).length}</div><div class="lbl">Đã Vote</div></div>
+        <div class="stat-box"><div class="num">${polls.length}</div><div class="lbl">Tổng Poll</div></div>
+        <div class="stat-box"><div class="num" style="color:var(--green)">${polls.filter(p=>new Date(p.endTime)>new Date()).length}</div><div class="lbl">Đang Mở</div></div>
+      </div>
+      <div class="sidebar-card">
+        <h3>Đổi Mật Khẩu</h3>
+        <div class="fg"><label>Mật Khẩu Hiện Tại</label><input type="password" id="pw-old" placeholder="••••••••"></div>
+        <div class="fg"><label>Mật Khẩu Mới</label><input type="password" id="pw-new" placeholder="••••••••"></div>
+        <div class="fg"><label>Xác Nhận</label><input type="password" id="pw-cf" placeholder="••••••••">
+          <div class="err-msg" id="pw-err"></div></div>
+        <button class="btn btn-primary btn-sm" id="btn-changepw" onclick="changePassword()">Lưu Mật Khẩu</button>
+      </div>
+    </div>`;
+}
+
+function openEditProfile(){
+  const profile=currentUser?.profile||{};
+  // Fill current values
+  const dn=document.getElementById('edit-display-name');
+  if(dn) dn.value=profile.displayName||currentUser.username;
+  const bio=document.getElementById('edit-bio');
+  if(bio) bio.value=profile.bio||'';
+  const avUrl=document.getElementById('edit-avatar-url');
+  if(avUrl) avUrl.value=profile.avatarUrl||'';
+  const cvUrl=document.getElementById('edit-cover-url');
+  if(cvUrl) cvUrl.value=profile.coverUrl||'';
+  previewAvatarUrl();
+  previewCoverUrl();
+  // Render frame selector
+  const fs=document.getElementById('frame-selector');
+  if(fs) fs.innerHTML=AVATAR_FRAMES.map(f=>`
+    <div class="frame-opt ${profile.frameId===f.id?'selected':''}" onclick="selectFrame('${f.id}',this)">
+      <div class="frame-preview">${f.emoji}</div>${f.name}
+    </div>`).join('');
+  // Render title selector
+  const ts=document.getElementById('title-selector');
+  const availTitles=TITLES.filter(t=>t.id!=='admin'||(currentUser.role==='admin'));
+  if(ts) ts.innerHTML=availTitles.map(t=>`
+    <div class="title-opt ${profile.titleId===t.id?'selected':''}" onclick="selectTitle('${t.id}',this)" style="color:${profile.titleId===t.id?t.color:''}">
+      ${t.emoji} ${t.name}
+    </div>`).join('');
+  openModal('modal-edit-profile');
+}
+
+function selectFrame(id,el){
+  document.querySelectorAll('.frame-opt').forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function selectTitle(id,el){
+  document.querySelectorAll('.title-opt').forEach(e=>{e.classList.remove('selected');e.style.color='';});
+  const t=TITLES.find(t=>t.id===id);
+  el.classList.add('selected');
+  if(t) el.style.color=t.color;
+}
+
+async function saveProfile(){
+  const displayName=document.getElementById('edit-display-name')?.value.trim()||currentUser.username;
+  const bio=document.getElementById('edit-bio')?.value.trim()||'';
+  const avatarUrl=document.getElementById('edit-avatar-url')?.value.trim()||'';
+  const coverUrl=document.getElementById('edit-cover-url')?.value.trim()||'';
+  const selectedFrameEl=document.querySelector('.frame-opt.selected');
+  const selectedTitleEl=document.querySelector('.title-opt.selected');
+  const frameId=selectedFrameEl?.onclick?.toString().match(/selectFrame\('(\w+)'/)?.[1]||
+    AVATAR_FRAMES.find(f=>selectedFrameEl?.textContent.includes(f.name))?.id||'none';
+  const titleId=selectedTitleEl?.onclick?.toString().match(/selectTitle\('(\w+)'/)?.[1]||'none';
+
+  // Get frame/title id from data attributes via text matching
+  let fId='none',tId='none';
+  document.querySelectorAll('.frame-opt').forEach(el=>{
+    if(el.classList.contains('selected')){
+      const match=el.getAttribute('onclick')?.match(/selectFrame\('([^']+)'/);
+      if(match) fId=match[1];
+    }
+  });
+  document.querySelectorAll('.title-opt').forEach(el=>{
+    if(el.classList.contains('selected')){
+      const match=el.getAttribute('onclick')?.match(/selectTitle\('([^']+)'/);
+      if(match) tId=match[1];
+    }
+  });
+
+  const newProfile={displayName,bio,avatarUrl,coverUrl,frameId:fId,titleId:tId};
+  try{
+    await DB.update({[`users/${currentUser.username}/profile`]:newProfile});
+    currentUser.profile=newProfile;
+    localStorage.setItem(K_SESSION,JSON.stringify(currentUser));
+    closeModal('modal-edit-profile');
+    renderTopbar();
+    renderProfile();
+    toast('✓ Đã lưu hồ sơ!','t-success');
+  }catch(e){toast('Lỗi khi lưu!','t-error');}
+}
+
+async function changePassword(){
+  const btn=document.getElementById('btn-changepw');
+  const old=document.getElementById('pw-old').value;
+  const nw=document.getElementById('pw-new').value;
+  const cf=document.getElementById('pw-cf').value;
+  const err=document.getElementById('pw-err');
+  const hashedOld=await hashPassword(old);
+  if(hashedOld!==currentUser.password){showErr(err,'Mật khẩu hiện tại không đúng!');return;}
+  if(nw.length<6){showErr(err,'Mật khẩu mới ít nhất 6 ký tự!');return;}
+  if(nw!==cf){showErr(err,'Mật khẩu xác nhận không khớp!');return;}
+  btn.disabled=true;btn.textContent='Đang lưu...';
+  try{
+    const hashedNew=await hashPassword(nw);
+    await DB.update({[`users/${currentUser.username}/password`]:hashedNew});
+    currentUser.password=hashedNew;
+    localStorage.setItem(K_SESSION,JSON.stringify(currentUser));
+    err.classList.remove('show');
+    ['pw-old','pw-new','pw-cf'].forEach(id=>document.getElementById(id).value='');
+    toast('Đổi mật khẩu thành công!','t-success');
+  }catch{toast('Lỗi!','t-error');}
+  finally{btn.disabled=false;btn.textContent='Lưu Mật Khẩu';}
 }
 
 // ════════════════════════════════════════════════════════════════
 // CREATE POLL
 // ════════════════════════════════════════════════════════════════
 let optCardCount=0;
-function initCreateForm() {
-  document.getElementById('opt-cards').innerHTML=''; optCardCount=0;
-  addOptCard(); addOptCard();
+function initCreateForm(){
+  document.getElementById('opt-cards').innerHTML='';optCardCount=0;
+  addOptCard();addOptCard();
   const dt=new Date(Date.now()+86400000);
   document.getElementById('c-endtime').value=dt.toISOString().slice(0,16);
   document.getElementById('c-title').value='';
   document.getElementById('c-hide-before').value='1';
   document.getElementById('c-allow-change').checked=true;
 }
-
-function addOptCard() {
-  optCardCount++;
-  const id=optCardCount;
+function addOptCard(){
+  optCardCount++;const id=optCardCount;
   const div=document.createElement('div');
-  div.className='opt-card anim'; div.id=`opt-card-${id}`;
+  div.className='opt-card anim';div.id=`opt-card-${id}`;
   div.innerHTML=`
     <div class="opt-card-header">
       <div class="opt-card-num">${id}</div>
       <input type="text" placeholder="Nhập lựa chọn ${id}..." id="opt-label-${id}">
     </div>
     <div class="opt-card-body">
-      <div class="fg"><label>Phiếu Ảo</label>
-        <input type="number" id="opt-fake-${id}" value="0" min="0"></div>
-      <div class="fg"><label>Mã Thưởng <span style="color:var(--text3);font-size:10px;text-transform:none;font-weight:400">(khi poll kết thúc)</span></label>
-        <input type="text" id="opt-reward-${id}" placeholder="VD: NTZ-WIN-${id}"></div>
-      <div class="fg opt-card-reward"><label>Tin Nhắn Ẩn <span style="color:var(--text3);font-size:10px;text-transform:none;font-weight:400">(sau khi chọn)</span></label>
-        <input type="text" id="opt-msg-${id}" placeholder="Tin nhắn bí mật..."></div>
+      <div class="fg"><label>Phiếu Ảo</label><input type="number" id="opt-fake-${id}" value="0" min="0"></div>
+      <div class="fg"><label>Mã Thưởng</label><input type="text" id="opt-reward-${id}" placeholder="VD: NTZ-WIN-${id}"></div>
+      <div class="fg opt-card-reward"><label>Tin Nhắn Ẩn</label><input type="text" id="opt-msg-${id}" placeholder="Tin nhắn bí mật..."></div>
     </div>
-    <div class="opt-card-actions">
-      <button class="btn btn-danger btn-xs" onclick="removeOptCard(${id})">× Xóa</button>
-    </div>`;
+    <div class="opt-card-actions"><button class="btn btn-danger btn-xs" onclick="removeOptCard(${id})">× Xóa</button></div>`;
   document.getElementById('opt-cards').appendChild(div);
 }
-
-function removeOptCard(id) {
+function removeOptCard(id){
   const cards=document.getElementById('opt-cards').children;
   if(cards.length<=2){toast('Cần ít nhất 2 lựa chọn!','t-error');return;}
   document.getElementById(`opt-card-${id}`)?.remove();
 }
-
-async function createPoll() {
+async function createPoll(){
   const title=document.getElementById('c-title').value.trim();
   const endTime=document.getElementById('c-endtime').value;
   const hideBefore=document.getElementById('c-hide-before').value==='1';
   const allowChange=document.getElementById('c-allow-change').checked;
-
   const cards=document.getElementById('opt-cards').querySelectorAll('.opt-card');
   const options=[];
   cards.forEach(card=>{
-    const m=card.id.match(/opt-card-(\d+)/); if(!m) return;
+    const m=card.id.match(/opt-card-(\d+)/);if(!m)return;
     const n=m[1];
     const label=document.getElementById(`opt-label-${n}`)?.value.trim();
-    if(!label) return;
-    options.push({
-      id:'o'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
-      label,
-      votes:parseInt(document.getElementById(`opt-fake-${n}`)?.value)||0,
-      rewardCode:document.getElementById(`opt-reward-${n}`)?.value.trim()||'',
-      hiddenMsg:document.getElementById(`opt-msg-${n}`)?.value.trim()||'',
-    });
+    if(!label)return;
+    options.push({id:'o'+Date.now()+'_'+Math.random().toString(36).slice(2,6),label,votes:parseInt(document.getElementById(`opt-fake-${n}`)?.value)||0,rewardCode:document.getElementById(`opt-reward-${n}`)?.value.trim()||'',hiddenMsg:document.getElementById(`opt-msg-${n}`)?.value.trim()||''});
   });
-
-  if(!title)           {toast('Nhập tiêu đề!','t-error');return;}
-  if(options.length<2) {toast('Cần ít nhất 2 lựa chọn!','t-error');return;}
-  if(!endTime)         {toast('Chọn thời gian kết thúc!','t-error');return;}
-
-  // ✅ FIX 9: Lưu options dưới dạng Object (key=id) thay vì Array để Firebase không bị convert
-  const optionsMap = {};
-  options.forEach(o => { optionsMap[o.id] = o; });
-
+  if(!title){toast('Nhập tiêu đề!','t-error');return;}
+  if(options.length<2){toast('Cần ít nhất 2 lựa chọn!','t-error');return;}
+  if(!endTime){toast('Chọn thời gian kết thúc!','t-error');return;}
+  const optionsMap={};options.forEach(o=>{optionsMap[o.id]=o;});
   const pollId='p'+Date.now();
-  try {
-    await DB.set(`polls/${pollId}`,{
-      id:pollId, title, endTime, hideBefore, allowChange,
-      createdAt:new Date().toISOString(), createdBy:currentUser.username,
-      options: optionsMap
-    });
+  try{
+    await DB.set(`polls/${pollId}`,{id:pollId,title,endTime,hideBefore,allowChange,createdAt:new Date().toISOString(),createdBy:currentUser.username,options:optionsMap});
     toast('✦ Tạo bình chọn thành công!','t-success');
     setView('polls');
-  } catch(e){ toast('Lỗi khi tạo!','t-error'); }
+  }catch(e){toast('Lỗi khi tạo!','t-error');}
 }
 
 // ════════════════════════════════════════════════════════════════
-// RENDER POLLS — ✅ FIX 10: Clear timer an toàn, tránh leak
+// RENDER POLLS
 // ════════════════════════════════════════════════════════════════
-const cdTimers = {};
-
-function clearAllTimers() {
-  Object.keys(cdTimers).forEach(k => {
-    clearInterval(cdTimers[k]);
-    delete cdTimers[k];
-  });
-}
-
-function renderPolls() {
+const cdTimers={};
+function clearAllTimers(){Object.keys(cdTimers).forEach(k=>{clearInterval(cdTimers[k]);delete cdTimers[k];});}
+function renderPolls(){
   clearAllTimers();
   const polls=Object.values(allPolls).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   const container=document.getElementById('polls-list');
-  if(!polls.length){
-    container.innerHTML=`<div class="empty"><div class="empty-ico">🗳</div><h3>Chưa có bình chọn nào</h3><p>${isAdmin()?'Tạo bình chọn từ menu Admin':'Hãy quay lại sau'}</p></div>`;
-    return;
-  }
+  if(!polls.length){container.innerHTML=`<div class="empty"><div class="empty-ico">🗳</div><h3>Chưa có bình chọn nào</h3><p>${isAdmin()?'Tạo bình chọn từ menu Admin':'Hãy quay lại sau'}</p></div>`;return;}
   container.innerHTML='';
   polls.forEach(p=>container.appendChild(buildPollCard(p)));
 }
-
-function renderMyVotes() {
+function renderMyVotes(){
   const polls=Object.values(allPolls).filter(p=>myVotes[p.id]).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   const container=document.getElementById('myvotes-list');
-  if(!polls.length){
-    container.innerHTML=`<div class="empty"><div class="empty-ico">✅</div><h3>Bạn chưa bình chọn</h3><p>Hãy tham gia!</p></div>`;
-    return;
-  }
+  if(!polls.length){container.innerHTML=`<div class="empty"><div class="empty-ico">✅</div><h3>Bạn chưa bình chọn</h3><p>Hãy tham gia!</p></div>`;return;}
   container.innerHTML='';
   polls.forEach(p=>container.appendChild(buildPollCard(p)));
 }
-
-// ✅ FIX 11: getOptions luôn trả về Array đúng cách từ cả Object lẫn Array
-function getOptions(poll) {
-  if (!poll.options) return [];
-  if (Array.isArray(poll.options)) return poll.options;
+function getOptions(poll){
+  if(!poll.options)return[];
+  if(Array.isArray(poll.options))return poll.options;
   return Object.values(poll.options);
 }
-
-function buildPollCard(poll) {
+function buildPollCard(poll){
   const now=new Date();
   const ended=new Date(poll.endTime)<now;
   const myVoteId=isLoggedIn()?(myVotes[poll.id]||null):null;
@@ -1121,10 +1426,8 @@ function buildPollCard(poll) {
   const maxVotes=Math.max(...opts.map(o=>o.votes||0));
   const showStats=!poll.hideBefore||myVoteId||ended||isAnon;
   const canChange=poll.allowChange&&!ended&&isLoggedIn()&&myVoteId;
-
   const card=document.createElement('div');
-  card.className='poll-card anim'; card.id='pollcard-'+poll.id;
-
+  card.className='poll-card anim';card.id='pollcard-'+poll.id;
   const optsHTML=opts.map(opt=>{
     const pct=total>0?Math.round((opt.votes||0)/total*100):0;
     const isMy=myVoteId===opt.id;
@@ -1138,24 +1441,16 @@ function buildPollCard(poll) {
       <div class="opt-bar" style="width:${showStats?pct:0}%"></div>
       <div class="opt-radio"></div>
       <div class="opt-label">${esc(opt.label)}${isWin?' 🏆':''}${isMy&&canChange?'<div class="change-hint">↕ Click lựa chọn khác để đổi</div>':''}</div>
-      ${showStats
-        ?`<div class="opt-stats"><div class="opt-pct">${pct}%</div><div class="opt-cnt">${opt.votes||0} phiếu</div></div>`
-        :`<div class="hidden-stats"><span class="lock-ico">🔒</span></div>`}
+      ${showStats?`<div class="opt-stats"><div class="opt-pct">${pct}%</div><div class="opt-cnt">${opt.votes||0} phiếu</div></div>`:`<div class="hidden-stats"><span class="lock-ico">🔒</span></div>`}
       ${opt.hiddenMsg&&isMy?`<span style="position:relative;z-index:2;margin-left:4px;cursor:pointer;font-size:13px" onclick="event.stopPropagation();showHiddenMsgDirect('${esc(opt.hiddenMsg)}')">💬</span>`:''}
     </div>`;
   }).join('');
-
   let actHTML=`<button class="btn btn-secondary btn-sm" onclick="openChartModal('${poll.id}')">📊 Biểu Đồ</button>`;
-  if(myVoteId&&ended){
-    const votedOpt=opts.find(o=>o.id===myVoteId);
-    if(votedOpt?.rewardCode) actHTML+=`<button class="btn btn-sm" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--yellow)" onclick="showReward('${poll.id}')">🎁 Nhận Mã</button>`;
-  }
+  if(myVoteId&&ended){const votedOpt=opts.find(o=>o.id===myVoteId);if(votedOpt?.rewardCode) actHTML+=`<button class="btn btn-sm" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--yellow)" onclick="showReward('${poll.id}')">🎁 Nhận Mã</button>`;}
   if(isAdmin()) actHTML+=`<button class="btn btn-danger btn-sm" onclick="askDeletePoll('${poll.id}')">🗑 Xóa</button>`;
   if(isAnon) actHTML+=`<button class="btn btn-primary btn-sm" onclick="showPage('page-auth');switchAuthTab('login')">🔑 Đăng nhập để vote</button>`;
-
   const endDate=new Date(poll.endTime).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
   const cdId='cd-'+poll.id;
-
   card.innerHTML=`
     <div class="poll-card-top">
       <div class="poll-card-title">${esc(poll.title)}</div>
@@ -1169,18 +1464,16 @@ function buildPollCard(poll) {
       <div class="option-list">${optsHTML}</div>
     </div>
     <div class="poll-actions-bar">${actHTML}</div>`;
-
   if(!ended){
     const tick=()=>{
       const rem=new Date(poll.endTime)-new Date();
       const el=document.getElementById(cdId);
-      if(!el){ clearInterval(cdTimers[poll.id]); delete cdTimers[poll.id]; return; }
-      if(rem<=0){ clearInterval(cdTimers[poll.id]); delete cdTimers[poll.id]; renderPolls(); return; }
+      if(!el){clearInterval(cdTimers[poll.id]);delete cdTimers[poll.id];return;}
+      if(rem<=0){clearInterval(cdTimers[poll.id]);delete cdTimers[poll.id];renderPolls();return;}
       const d=Math.floor(rem/86400000),h=Math.floor(rem%86400000/3600000),m=Math.floor(rem%3600000/60000),s=Math.floor(rem%60000/1000);
       el.textContent=d>0?`${d}n ${h}g ${m}p`:h>0?`${h}g ${m}p ${s}s`:`${m}p ${s}s`;
     };
     tick();
-    // ✅ FIX 12: Clear timer cũ của cùng poll trước khi tạo mới
     if(cdTimers[poll.id]) clearInterval(cdTimers[poll.id]);
     cdTimers[poll.id]=setInterval(tick,1000);
   }
@@ -1188,225 +1481,98 @@ function buildPollCard(poll) {
 }
 
 // ════════════════════════════════════════════════════════════════
-// VOTE — ✅ FIX 13: Debounce + lock tránh spam / race condition
+// VOTE
 // ════════════════════════════════════════════════════════════════
-async function voteFor(pollId, optId) {
+async function voteFor(pollId,optId){
   if(!isLoggedIn()){openModal('modal-login-req');return;}
-
-  // Debounce: nếu đang xử lý vote cho poll này thì bỏ qua
-  if(voteInProgress.has(pollId)){
-    toast('Đang xử lý...','t-info');
-    return;
-  }
-
-  const poll=allPolls[pollId]; if(!poll) return;
+  if(voteInProgress.has(pollId)){toast('Đang xử lý...','t-info');return;}
+  const poll=allPolls[pollId];if(!poll)return;
   if(new Date(poll.endTime)<new Date()){toast('Bình chọn đã kết thúc!','t-error');return;}
-
   const opts=getOptions(poll);
   const opt=opts.find(o=>o.id===optId);
   if(!opt||opt.disabled){toast('Lựa chọn không khả dụng!','t-error');return;}
-
   const prevOptId=myVotes[pollId]||null;
-
-  // Thêm trạng thái loading lên row
-  const rowEl = document.getElementById(`optrow-${pollId}-${optId}`);
+  const rowEl=document.getElementById(`optrow-${pollId}-${optId}`);
   if(rowEl) rowEl.classList.add('voting');
-
   voteInProgress.add(pollId);
-
-  try {
-    // Click lại cùng option → bỏ phiếu
+  try{
     if(prevOptId===optId){
       const prevOpt=opts.find(o=>o.id===prevOptId);
       const updates={};
       if(prevOpt) updates[`polls/${pollId}/options/${prevOptId}/votes`]=Math.max(0,(prevOpt.votes||0)-1);
       updates[`votes/${currentUser.username}/${pollId}`]=null;
       await DB.update(updates);
-      toast('↩ Đã bỏ chọn phiếu','t-info');
-      return;
+      toast('↩ Đã bỏ chọn phiếu','t-info');return;
     }
-
     if(prevOptId&&!poll.allowChange){toast('Bình chọn này không cho đổi phiếu!','t-error');return;}
-
     const updates={};
-    if(prevOptId){
-      const prevOpt=opts.find(o=>o.id===prevOptId);
-      if(prevOpt) updates[`polls/${pollId}/options/${prevOptId}/votes`]=Math.max(0,(prevOpt.votes||0)-1);
-    }
+    if(prevOptId){const prevOpt=opts.find(o=>o.id===prevOptId);if(prevOpt) updates[`polls/${pollId}/options/${prevOptId}/votes`]=Math.max(0,(prevOpt.votes||0)-1);}
     updates[`polls/${pollId}/options/${optId}/votes`]=(opt.votes||0)+1;
     updates[`votes/${currentUser.username}/${pollId}`]=optId;
-
     await DB.update(updates);
     if(prevOptId) toast('↕ Đã đổi phiếu!','t-success');
     else toast('✓ Phiếu đã được ghi nhận!','t-success');
     if(!prevOptId&&opt.hiddenMsg) setTimeout(()=>showHiddenMsgDirect(opt.hiddenMsg),400);
-
-  } catch(e) {
-    toast('Lỗi khi ghi phiếu!','t-error');
-  } finally {
-    voteInProgress.delete(pollId);
-    if(rowEl) rowEl.classList.remove('voting');
-  }
+  }catch(e){toast('Lỗi khi ghi phiếu!','t-error');}
+  finally{voteInProgress.delete(pollId);if(rowEl)rowEl.classList.remove('voting');}
 }
 
 // ════════════════════════════════════════════════════════════════
-// REWARD & HIDDEN MSG
+// REWARD / HIDDEN
 // ════════════════════════════════════════════════════════════════
-function showReward(pollId) {
-  const poll=allPolls[pollId]; if(!poll) return;
+function showReward(pollId){
+  const poll=allPolls[pollId];if(!poll)return;
   const opts=getOptions(poll);
   const myOpt=opts.find(o=>o.id===myVotes[pollId]);
-  if(myOpt?.rewardCode){
-    document.getElementById('modal-reward-option').textContent=myOpt.label;
-    document.getElementById('modal-reward-code').textContent=myOpt.rewardCode;
-    openModal('modal-reward');
-  }
+  if(myOpt?.rewardCode){document.getElementById('modal-reward-option').textContent=myOpt.label;document.getElementById('modal-reward-code').textContent=myOpt.rewardCode;openModal('modal-reward');}
 }
-
-function copyRewardCode() {
+function copyRewardCode(){
   const code=document.getElementById('modal-reward-code').textContent;
-  navigator.clipboard.writeText(code)
-    .then(()=>toast('Đã sao chép mã!','t-success'))
-    .catch(()=>{const ta=document.createElement('textarea');ta.value=code;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('Đã sao chép!','t-success');});
+  navigator.clipboard.writeText(code).then(()=>toast('Đã sao chép mã!','t-success')).catch(()=>{const ta=document.createElement('textarea');ta.value=code;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('Đã sao chép!','t-success');});
 }
-
-function showHiddenMsgDirect(msg) {
-  document.getElementById('hidden-msg-content').textContent=msg;
-  openModal('modal-hiddenmsg');
-}
+function showHiddenMsgDirect(msg){document.getElementById('hidden-msg-content').textContent=msg;openModal('modal-hiddenmsg');}
 
 // ════════════════════════════════════════════════════════════════
 // DELETE
 // ════════════════════════════════════════════════════════════════
 let deletePollId=null;
 function askDeletePoll(id){deletePollId=id;openModal('modal-delete');}
-async function confirmDeletePoll() {
-  if(!deletePollId) return;
+async function confirmDeletePoll(){
+  if(!deletePollId)return;
   try{
-    // ✅ FIX 14: Xóa cả votes liên quan khi xóa poll
-    const updates = { [`polls/${deletePollId}`]: null };
-    const allVoteUsers = await DB.get('votes');
-    if(allVoteUsers) {
-      Object.keys(allVoteUsers).forEach(username => {
-        if(allVoteUsers[username][deletePollId]) {
-          updates[`votes/${username}/${deletePollId}`] = null;
-        }
-      });
-    }
+    const updates={[`polls/${deletePollId}`]:null};
+    const allVoteUsers=await DB.get('votes');
+    if(allVoteUsers) Object.keys(allVoteUsers).forEach(u=>{if(allVoteUsers[u][deletePollId]) updates[`votes/${u}/${deletePollId}`]=null;});
     await DB.update(updates);
     closeModal('modal-delete');
     toast('Đã xóa bình chọn','t-success');
-  }
-  catch{toast('Lỗi khi xóa!','t-error');}
+  }catch{toast('Lỗi khi xóa!','t-error');}
   deletePollId=null;
 }
 
 // ════════════════════════════════════════════════════════════════
 // CHARTS
 // ════════════════════════════════════════════════════════════════
-let chartInstance=null, currentChartPollId=null, currentChartType='bar';
+let chartInstance=null,currentChartPollId=null,currentChartType='bar';
 const CHART_COLORS=['#4f8ef7','#a855f7','#22d3ee','#10b981','#f59e0b','#ef4444','#ec4899','#8b5cf6'];
-
-function openChartModal(pollId) {
-  currentChartPollId=pollId; currentChartType='bar';
-  document.querySelectorAll('.chart-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
-  document.getElementById('chart-modal-title').textContent=allPolls[pollId]?.title||'';
-  openModal('modal-chart'); setTimeout(()=>drawChart('bar'),50);
-}
-function switchChart(type) {
-  currentChartType=type;
-  document.querySelectorAll('.chart-tab').forEach(t=>t.classList.toggle('active',t.textContent.includes(type==='bar'?'Cột':'Quạt')));
-  drawChart(type);
-}
-function drawChart(type) {
+function openChartModal(pollId){currentChartPollId=pollId;currentChartType='bar';document.querySelectorAll('.chart-tab').forEach((t,i)=>t.classList.toggle('active',i===0));document.getElementById('chart-modal-title').textContent=allPolls[pollId]?.title||'';openModal('modal-chart');setTimeout(()=>drawChart('bar'),50);}
+function switchChart(type){currentChartType=type;document.querySelectorAll('.chart-tab').forEach(t=>t.classList.toggle('active',t.textContent.includes(type==='bar'?'Cột':'Quạt')));drawChart(type);}
+function drawChart(type){
   if(chartInstance){chartInstance.destroy();chartInstance=null;}
-  const poll=allPolls[currentChartPollId]; if(!poll) return;
+  const poll=allPolls[currentChartPollId];if(!poll)return;
   const opts=getOptions(poll);
   const labels=opts.map(o=>o.label),data=opts.map(o=>o.votes||0);
   const colors=CHART_COLORS.slice(0,labels.length);
   const ctx=document.getElementById('chart-canvas').getContext('2d');
-  chartInstance=new Chart(ctx,{
-    type:type==='bar'?'bar':'doughnut',
-    data:{labels,datasets:[{data,backgroundColor:colors.map(c=>c+'99'),borderColor:colors,borderWidth:2,borderRadius:type==='bar'?8:0}]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:type!=='bar',labels:{color:'#a0a0c0',font:{family:'JetBrains Mono',size:12}}},
-        tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed.y??ctx.parsed} phiếu`}}},
-      scales:type==='bar'?{
-        x:{ticks:{color:'#a0a0c0',font:{family:'JetBrains Mono',size:11}},grid:{color:'rgba(255,255,255,.05)'}},
-        y:{ticks:{color:'#a0a0c0',font:{family:'JetBrains Mono',size:11}},grid:{color:'rgba(255,255,255,.05)'},beginAtZero:true}
-      }:{}}
-  });
-  document.getElementById('chart-legend').innerHTML=labels.map((l,i)=>
-    `<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)"><span style="width:10px;height:10px;border-radius:3px;background:${colors[i]};flex-shrink:0;display:inline-block"></span>${esc(l)}: <b style="color:var(--text)">${data[i]}</b></div>`
-  ).join('');
-}
-
-// ════════════════════════════════════════════════════════════════
-// PROFILE — ✅ FIX 15: Hash password khi đổi mật khẩu
-// ════════════════════════════════════════════════════════════════
-function renderProfile() {
-  if(isAnon){
-    document.getElementById('profile-content').innerHTML=`
-      <div class="empty"><div class="empty-ico">👻</div><h3>Bạn đang ẩn danh</h3>
-      <p style="margin-bottom:20px">Đăng nhập để xem hồ sơ</p>
-      <button class="btn btn-primary" onclick="showPage('page-auth');switchAuthTab('login')">🔑 Đăng Nhập</button></div>`;
-    return;
-  }
-  if(!currentUser) return;
-  const polls=Object.values(allPolls),isAd=isAdmin();
-  const joinDate=new Date(currentUser.createdAt).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'});
-  document.getElementById('profile-content').innerHTML=`
-    <div class="profile-header anim">
-      <div class="profile-avatar ${isAd?'admin-av-lg':''}">${currentUser.username[0].toUpperCase()}</div>
-      <div>
-        <h2>${esc(currentUser.username)}</h2>
-        <p style="font-size:14px;color:var(--text2);margin-top:3px">Tham gia: ${joinDate}${currentUser.email?' · '+esc(currentUser.email):''}</p>
-        ${isAd?'<div class="admin-crown">👑 Quản Trị Viên</div>':''}
-      </div>
-    </div>
-    <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
-      <div class="stat-box"><div class="num" style="color:var(--secondary)">${Object.keys(myVotes).length}</div><div class="lbl">Đã Vote</div></div>
-      <div class="stat-box"><div class="num">${polls.length}</div><div class="lbl">Tổng Poll</div></div>
-      <div class="stat-box"><div class="num" style="color:var(--green)">${polls.filter(p=>new Date(p.endTime)>new Date()).length}</div><div class="lbl">Đang Mở</div></div>
-    </div>
-    <div class="sidebar-card">
-      <h3>Đổi Mật Khẩu</h3>
-      <div class="fg"><label>Mật Khẩu Hiện Tại</label><input type="password" id="pw-old" placeholder="••••••••"></div>
-      <div class="fg"><label>Mật Khẩu Mới</label><input type="password" id="pw-new" placeholder="••••••••"></div>
-      <div class="fg"><label>Xác Nhận</label><input type="password" id="pw-cf" placeholder="••••••••">
-        <div class="err-msg" id="pw-err"></div></div>
-      <button class="btn btn-primary btn-sm" id="btn-changepw" onclick="changePassword()">Lưu Mật Khẩu</button>
-    </div>`;
-}
-
-async function changePassword() {
-  const btn=document.getElementById('btn-changepw');
-  const old=document.getElementById('pw-old').value;
-  const nw=document.getElementById('pw-new').value;
-  const cf=document.getElementById('pw-cf').value;
-  const err=document.getElementById('pw-err');
-  const hashedOld = await hashPassword(old);
-  if(hashedOld!==currentUser.password){showErr(err,'Mật khẩu hiện tại không đúng!');return;}
-  if(nw.length<6){showErr(err,'Mật khẩu mới ít nhất 6 ký tự!');return;}
-  if(nw!==cf){showErr(err,'Mật khẩu xác nhận không khớp!');return;}
-  btn.disabled=true; btn.textContent='Đang lưu...';
-  try{
-    const hashedNew = await hashPassword(nw);
-    await DB.update({[`users/${currentUser.username}/password`]:hashedNew});
-    currentUser.password=hashedNew;
-    localStorage.setItem(K_SESSION,JSON.stringify(currentUser));
-    err.classList.remove('show');
-    ['pw-old','pw-new','pw-cf'].forEach(id=>document.getElementById(id).value='');
-    toast('Đổi mật khẩu thành công!','t-success');
-  } catch{toast('Lỗi!','t-error');}
-  finally{btn.disabled=false;btn.textContent='Lưu Mật Khẩu';}
+  chartInstance=new Chart(ctx,{type:type==='bar'?'bar':'doughnut',data:{labels,datasets:[{data,backgroundColor:colors.map(c=>c+'99'),borderColor:colors,borderWidth:2,borderRadius:type==='bar'?8:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:type!=='bar',labels:{color:'#a0a0c0',font:{family:'JetBrains Mono',size:12}}},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed.y??ctx.parsed} phiếu`}}},scales:type==='bar'?{x:{ticks:{color:'#a0a0c0',font:{family:'JetBrains Mono',size:11}},grid:{color:'rgba(255,255,255,.05)'}},y:{ticks:{color:'#a0a0c0',font:{family:'JetBrains Mono',size:11}},grid:{color:'rgba(255,255,255,.05)'},beginAtZero:true}}:{}}});
+  document.getElementById('chart-legend').innerHTML=labels.map((l,i)=>`<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)"><span style="width:10px;height:10px;border-radius:3px;background:${colors[i]};flex-shrink:0;display:inline-block"></span>${esc(l)}: <b style="color:var(--text)">${data[i]}</b></div>`).join('');
 }
 
 // ════════════════════════════════════════════════════════════════
 // ADMIN SETTINGS
 // ════════════════════════════════════════════════════════════════
-function renderSettings() {
-  if(!isAdmin()) return;
+function renderSettings(){
+  if(!isAdmin())return;
   const s=appSettings;
   document.getElementById('settings-content').innerHTML=`
     <div style="max-width:700px;display:flex;flex-direction:column;gap:16px">
@@ -1416,11 +1582,13 @@ function renderSettings() {
           <div class="fg"><label>Tên App</label><input type="text" id="s-appname" value="${esc(s.appName||'')}"></div>
           <div class="fg"><label>Version</label><input type="text" id="s-version" value="${esc(s.appVersion||'')}"></div>
           <div class="fg"><label>Update Text</label><input type="text" id="s-update" value="${esc(s.appUpdate||'')}"></div>
-          <div class="fg"><label>URL Logo</label><input type="text" id="s-logo" value="${esc(s.logoUrl||'')}" placeholder="https://..." oninput="previewLogo()"></div>
+          <div class="fg"><label>URL Logo</label><input type="text" id="s-logo" value="${esc(s.logoUrl||'')}" placeholder="https://..." oninput="previewSettingsLogo()"></div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
           <div id="logo-preview-box" style="width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--primary),var(--secondary));overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff">${s.logoUrl?`<img src="${esc(s.logoUrl)}" style="width:100%;height:100%;object-fit:cover">`:'NV'}</div>
           <span style="font-size:12px;color:var(--text3)">Preview logo</span>
+          <input type="file" id="s-logo-file" accept="image/*" style="display:none" onchange="handleLogoUpload(this)">
+          <button class="btn btn-secondary btn-xs" onclick="document.getElementById('s-logo-file').click()">📷 Upload</button>
         </div>
       </div>
       <div class="create-section">
@@ -1437,8 +1605,9 @@ function renderSettings() {
       </div>
       <div class="create-section">
         <div class="create-section-title">🖼 Ảnh Nền</div>
-        <div class="fg"><label>URL Ảnh</label><input type="text" id="s-bgurl" value="${esc(s.bgImageUrl||'')}" placeholder="https://... (để trống = không có ảnh nền)" oninput="updateBgPreview()"></div>
-        <div class="fg"><label>Hoặc Upload File</label><input type="file" id="s-bgfile" accept="image/*" onchange="handleBgUpload(this)" style="padding:8px;font-size:13px;cursor:pointer"></div>
+        <div class="fg"><label>URL Ảnh</label><input type="text" id="s-bgurl" value="${esc(s.bgImageUrl||'')}" placeholder="https://..." oninput="updateBgPreview()"></div>
+        <div class="fg"><label>Upload File Ảnh</label>
+          <input type="file" id="s-bgfile" accept="image/*" onchange="handleBgUpload(this)" style="padding:8px;font-size:13px;cursor:pointer;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);width:100%;color:var(--text)"></div>
         <div class="fg"><label>Blur — <span id="blur-val">${s.bgBlur||0}px</span></label>
           <input type="range" id="s-blur" min="0" max="20" value="${s.bgBlur||0}" oninput="document.getElementById('blur-val').textContent=this.value+'px';updateBgPreview()"></div>
         <div class="fg"><label>Opacity — <span id="opacity-val">${Math.round((s.bgOpacity??0.05)*100)}%</span></label>
@@ -1451,25 +1620,36 @@ function renderSettings() {
       <button class="btn btn-secondary btn-sm" style="width:100%" onclick="resetSettings()">↺ Khôi Phục Mặc Định</button>
     </div>`;
 }
-
-function previewLogo(){const url=document.getElementById('s-logo')?.value.trim();const box=document.getElementById('logo-preview-box');if(!box)return;box.innerHTML=url?`<img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.textContent='NV'">`:'NV';}
+function previewSettingsLogo(){const url=document.getElementById('s-logo')?.value.trim();const box=document.getElementById('logo-preview-box');if(!box)return;box.innerHTML=url?`<img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.textContent='NV'">`:'NV';}
+async function handleLogoUpload(input){
+  const file=input.files[0];if(!file)return;
+  toast('Đang tải logo...','t-info');
+  try{
+    let url;
+    try{url=await uploadToImgBB(file);}catch{url=await fileToBase64(file);}
+    const urlInput=document.getElementById('s-logo');
+    if(urlInput){urlInput.value=url;previewSettingsLogo();}
+    toast('✓ Logo đã sẵn sàng','t-success');
+  }catch(e){toast('Lỗi tải ảnh!','t-error');}
+}
 function updateColorPreview(){const val=document.getElementById('s-color')?.value;const box=document.getElementById('color-preview-box');if(box&&val)box.style.background=val;}
 function updateBgPreview(){
   const url=document.getElementById('s-bgurl')?.value.trim();
   const blur=document.getElementById('s-blur')?.value||0;
-  const box=document.getElementById('bg-preview-box'); if(!box)return;
-  box.style.backgroundImage=url?`url('${url}')`:'none'; box.style.filter=`blur(${blur}px)`;
+  const box=document.getElementById('bg-preview-box');if(!box)return;
+  box.style.backgroundImage=url?`url('${url}')`:'none';box.style.filter=`blur(${blur}px)`;
   box.innerHTML=url?'':`<div class="bg-preview-overlay">Chưa có ảnh nền</div>`;
 }
-function handleBgUpload(input){
-  const file=input.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=e=>{
+async function handleBgUpload(input){
+  const file=input.files[0];if(!file)return;
+  toast('Đang tải ảnh nền...','t-info');
+  try{
+    let url;
+    try{url=await uploadToImgBB(file);}catch{url=await fileToBase64(file);}
     const urlInput=document.getElementById('s-bgurl');
-    if(urlInput) urlInput.value=e.target.result;
-    updateBgPreview(); toast('Đã tải ảnh lên','t-success');
-  };
-  reader.readAsDataURL(file);
+    if(urlInput){urlInput.value=url;updateBgPreview();}
+    toast('✓ Ảnh nền đã sẵn sàng','t-success');
+  }catch(e){toast('Lỗi tải ảnh!','t-error');}
 }
 async function saveSettings(){
   const ns={
@@ -1486,9 +1666,9 @@ async function saveSettings(){
   catch{toast('Lỗi khi lưu!','t-error');}
 }
 async function resetSettings(){
-  if(!confirm('Khôi phục về mặc định?')) return;
+  if(!confirm('Khôi phục về mặc định?'))return;
   appSettings={...DEFAULT_SETTINGS};
-  await saveAppSettings(); renderSettings(); toast('Đã khôi phục mặc định','t-info');
+  await saveAppSettings();renderSettings();toast('Đã khôi phục mặc định','t-info');
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -1502,15 +1682,13 @@ function closeModal(id){
 document.querySelectorAll('.modal-overlay').forEach(o=>{
   o.addEventListener('click',e=>{if(e.target===o)closeModal(o.id);});
 });
-
 function toast(msg,type='t-info'){
   const stack=document.getElementById('toast-stack');
   const t=document.createElement('div');
-  t.className=`toast ${type}`; t.textContent=msg; stack.appendChild(t);
+  t.className=`toast ${type}`;t.textContent=msg;stack.appendChild(t);
   requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
   setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),400);},2800);
 }
-
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 </script>
 </body>
