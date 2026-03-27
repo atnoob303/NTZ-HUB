@@ -268,7 +268,7 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 @media(max-width:640px){.topbar{padding:0 14px}.main-wrap{padding:14px}}
 
 /* ══════════════════════════════════════════
-   PROFILE NEW
+   PROFILE
 ══════════════════════════════════════════ */
 .profile-cover{width:100%;height:180px;border-radius:var(--r2) var(--r2) 0 0;background:linear-gradient(135deg,var(--bg2),var(--bg3));position:relative;overflow:hidden;background-size:cover;background-position:center}
 .profile-cover-edit{position:absolute;bottom:10px;right:10px}
@@ -305,16 +305,28 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
 
 /* Avatar frames */
 .frame-selector{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
-.frame-opt{padding:8px;border-radius:8px;border:2px solid var(--border);cursor:pointer;text-align:center;transition:.2s;font-size:11px;color:var(--text2)}
+.frame-opt{padding:8px;border-radius:8px;border:2px solid var(--border);cursor:pointer;text-align:center;transition:.2s;font-size:11px;color:var(--text2);position:relative}
 .frame-opt:hover{border-color:var(--border2)}
 .frame-opt.selected{border-color:var(--primary);background:var(--primary-dim);color:var(--primary)}
+/* ★ NEW: locked frame style */
+.frame-opt.locked{opacity:.45;cursor:not-allowed;filter:grayscale(.6)}
+.frame-opt.locked:hover{border-color:var(--border)}
+.frame-opt .lock-tag{position:absolute;top:3px;right:3px;font-size:9px;background:rgba(0,0,0,.5);border-radius:4px;padding:1px 3px;line-height:1}
 .frame-preview{width:36px;height:36px;border-radius:50%;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:18px}
 
 /* Titles/badges system */
 .title-selector{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-.title-opt{padding:8px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:12px;transition:.2s;display:flex;align-items:center;gap:6px}
+.title-opt{padding:8px 12px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:12px;transition:.2s;display:flex;align-items:center;gap:6px;position:relative}
 .title-opt:hover{border-color:var(--border2);background:var(--bg2)}
 .title-opt.selected{border-color:var(--primary);background:var(--primary-dim);color:var(--primary)}
+/* ★ NEW: locked title style */
+.title-opt.locked{opacity:.45;cursor:not-allowed;filter:grayscale(.5)}
+.title-opt.locked:hover{background:transparent;border-color:var(--border)}
+.title-opt .lock-tag{margin-left:auto;font-size:9px;background:rgba(0,0,0,.4);border-radius:4px;padding:1px 4px;color:var(--text3)}
+
+/* unlock info box */
+.unlock-info{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:10px;font-size:12px;color:var(--text2);line-height:1.7}
+.unlock-info b{color:var(--text)}
 
 /* Image upload component */
 .img-upload-box{border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;transition:.2s;cursor:pointer}
@@ -579,7 +591,7 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
         </div>
         <button class="btn btn-roblox btn-full" onclick="confirmLinkRoblox()">✓ Liên Kết Tài Khoản Này</button>
       </div>
-      <p style="font-size:12px;color:var(--text3);margin-top:14px;text-align:center">Sau khi liên kết, bạn sẽ nhận badge ✅ Verified Roblox và có thể bình luận trong các poll.</p>
+      <p style="font-size:12px;color:var(--text3);margin-top:14px;text-align:center">Sau khi liên kết, bạn sẽ nhận badge ✅ Verified Roblox và mở khóa khung/danh hiệu Roblox.</p>
     </div>
   </div>
 </div>
@@ -632,13 +644,17 @@ body::before{content:'';position:fixed;inset:0;opacity:.03;background-image:url(
       </div>
       <!-- Avatar frame -->
       <div style="margin-bottom:16px">
-        <div style="font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Khung Avatar</div>
+        <div style="font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Khung Avatar</div>
         <div class="frame-selector" id="frame-selector"></div>
+        <!-- ★ unlock info -->
+        <div class="unlock-info" id="frame-unlock-info" style="display:none"></div>
       </div>
       <!-- Title -->
       <div style="margin-bottom:20px">
-        <div style="font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Danh Hiệu</div>
+        <div style="font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Danh Hiệu</div>
         <div class="title-selector" id="title-selector"></div>
+        <!-- ★ unlock info -->
+        <div class="unlock-info" id="title-unlock-info" style="display:none"></div>
       </div>
       <button class="btn btn-primary btn-full" onclick="saveProfile()">💾 Lưu Hồ Sơ</button>
     </div>
@@ -719,27 +735,48 @@ const localListeners={};
 function notifyListeners(k){(localListeners[k]||[]).forEach(h=>h());}
 
 // ════════════════════════════════════════════════════════════════
-// AVATAR FRAMES & TITLES
+// ★ AVATAR FRAMES & TITLES — với hệ thống mở khóa
+// unlock: 'all' | 'roblox' | 'admin' | {minVotes: N}
 // ════════════════════════════════════════════════════════════════
 const AVATAR_FRAMES=[
-  {id:'none',name:'Không có',css:'none',emoji:'⚪'},
-  {id:'gold',name:'Vàng',css:'3px solid #f59e0b',emoji:'🟡'},
-  {id:'blue',name:'Xanh',css:'3px solid #4f8ef7',emoji:'🔵'},
-  {id:'purple',name:'Tím',css:'3px solid #a855f7',emoji:'🟣'},
-  {id:'green',name:'Xanh lá',css:'3px solid #10b981',emoji:'🟢'},
-  {id:'roblox',name:'Roblox',css:'3px solid #00b2ff',emoji:'🎮'},
-  {id:'red',name:'Đỏ',css:'3px solid #ef4444',emoji:'🔴'},
-  {id:'rainbow',name:'Cầu vồng',css:'3px solid transparent',emoji:'🌈'},
+  {id:'none',   name:'Không có',  css:'none',                    emoji:'⚪', unlock:'all'},
+  {id:'blue',   name:'Xanh',      css:'3px solid #4f8ef7',       emoji:'🔵', unlock:'all'},
+  {id:'green',  name:'Xanh lá',   css:'3px solid #10b981',       emoji:'🟢', unlock:{minVotes:5}},
+  {id:'purple', name:'Tím',       css:'3px solid #a855f7',       emoji:'🟣', unlock:{minVotes:10}},
+  {id:'gold',   name:'Vàng',      css:'3px solid #f59e0b',       emoji:'🟡', unlock:{minVotes:20}},
+  {id:'roblox', name:'Roblox',    css:'3px solid #00b2ff',       emoji:'🎮', unlock:'roblox'},
+  {id:'red',    name:'Đỏ',        css:'3px solid #ef4444',       emoji:'🔴', unlock:'admin'},
+  {id:'rainbow',name:'Cầu vồng',  css:'3px solid transparent',   emoji:'🌈', unlock:'admin'},
 ];
 
 const TITLES=[
-  {id:'none',name:'Không có',color:'var(--text3)',emoji:''},
-  {id:'voter',name:'Voter Tích Cực',color:'var(--primary)',emoji:'🗳'},
-  {id:'robloxian',name:'Robloxian',color:'var(--roblox)',emoji:'🎮'},
-  {id:'veteran',name:'Cựu Chiến Binh',color:'var(--yellow)',emoji:'⭐'},
-  {id:'admin',name:'Admin',color:'var(--red)',emoji:'👑'},
-  {id:'verified',name:'Đã Xác Minh',color:'var(--green)',emoji:'✅'},
+  {id:'none',     name:'Không có',        color:'var(--text3)', emoji:'',  unlock:'all'},
+  {id:'voter',    name:'Voter Tích Cực',   color:'var(--primary)',emoji:'🗳',unlock:{minVotes:5}},
+  {id:'robloxian',name:'Robloxian',        color:'var(--roblox)',emoji:'🎮',unlock:'roblox'},
+  {id:'veteran',  name:'Cựu Chiến Binh',  color:'var(--yellow)',emoji:'⭐',unlock:{minVotes:20}},
+  {id:'verified', name:'Đã Xác Minh',     color:'var(--green)', emoji:'✅',unlock:'roblox'},
+  {id:'admin',    name:'Admin',            color:'var(--red)',   emoji:'👑',unlock:'admin'},
 ];
+
+// ★ Tính số vote của user hiện tại
+function getMyVoteCount(){ return Object.keys(myVotes).length; }
+
+// ★ Kiểm tra user có unlock được frame/title không
+function canUnlock(unlockRule){
+  if(unlockRule==='all') return true;
+  if(unlockRule==='admin') return isAdmin();
+  if(unlockRule==='roblox') return !!(currentUser?.roblox);
+  if(unlockRule?.minVotes) return getMyVoteCount()>=unlockRule.minVotes;
+  return false;
+}
+
+// ★ Tạo label gợi ý mở khóa
+function unlockHint(unlockRule){
+  if(unlockRule==='admin') return '🔒 Admin only';
+  if(unlockRule==='roblox') return '🔒 Liên kết Roblox';
+  if(unlockRule?.minVotes) return `🔒 Vote ${unlockRule.minVotes} lần`;
+  return '';
+}
 
 // ════════════════════════════════════════════════════════════════
 // STATE
@@ -918,10 +955,9 @@ function getAvatarHtml(user,size=26){
   const profile=user?.profile||{};
   const frameId=profile.frameId||'none';
   const frame=AVATAR_FRAMES.find(f=>f.id===frameId);
-  const borderStyle=frame?.id==='rainbow'?'border:3px solid transparent;background-clip:padding-box':'';
   if(profile.avatarUrl){
     return `<div style="position:relative;width:${size}px;height:${size}px;flex-shrink:0">
-      <img src="${esc(profile.avatarUrl)}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;border:${frame?.css||'none'};${frame?.id==='rainbow'?'outline:2px solid transparent':''}">
+      <img src="${esc(profile.avatarUrl)}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;border:${frame?.css||'none'}">
     </div>`;
   }
   const bg=user?.role==='admin'?'linear-gradient(135deg,#f59e0b,#ef4444)':'linear-gradient(135deg,var(--primary),var(--secondary))';
@@ -984,14 +1020,22 @@ function renderStats(){
 }
 
 // ════════════════════════════════════════════════════════════════
-// ROBLOX API
+// ★ ROBLOX API — dùng allorigins proxy để bypass CORS
 // ════════════════════════════════════════════════════════════════
+const RBLX_PROXY='https://api.allorigins.win/raw?url=';
+
+async function rblxFetch(url){
+  const resp=await fetch(RBLX_PROXY+encodeURIComponent(url));
+  if(!resp.ok) throw new Error('proxy error '+resp.status);
+  return resp.json();
+}
+
 let rblxSearchTimer=null;
 let selectedRobloxAccount=null;
 
 function debounceRobloxSearch(){
   clearTimeout(rblxSearchTimer);
-  rblxSearchTimer=setTimeout(doRobloxSearch,500);
+  rblxSearchTimer=setTimeout(doRobloxSearch,600);
 }
 
 async function doRobloxSearch(){
@@ -1000,21 +1044,17 @@ async function doRobloxSearch(){
   if(!q||q.length<2){if(resultsEl)resultsEl.style.display='none';return;}
   if(resultsEl){resultsEl.style.display='block';resultsEl.innerHTML='<div style="padding:12px;text-align:center;color:var(--text3);font-size:13px">🔍 Đang tìm kiếm...</div>';}
   try{
-    // Search by username
-    const resp=await fetch(`https://users.roblox.com/v1/users/search?keyword=${encodeURIComponent(q)}&limit=10`);
-    if(!resp.ok) throw new Error('API error');
-    const data=await resp.json();
+    const data=await rblxFetch(`https://users.roblox.com/v1/users/search?keyword=${encodeURIComponent(q)}&limit=10`);
     const users=data.data||[];
     if(!users.length){
       if(resultsEl) resultsEl.innerHTML='<div style="padding:12px;text-align:center;color:var(--text3);font-size:13px">Không tìm thấy tài khoản nào</div>';
       return;
     }
-    // Get thumbnails
+    // Get thumbnails qua proxy
     const ids=users.map(u=>u.id).join(',');
     let thumbs={};
     try{
-      const tResp=await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${ids}&size=150x150&format=Png`);
-      const tData=await tResp.json();
+      const tData=await rblxFetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${ids}&size=150x150&format=Png`);
       (tData.data||[]).forEach(t=>{thumbs[t.targetId]=t.imageUrl;});
     }catch{}
     if(resultsEl){
@@ -1028,7 +1068,7 @@ async function doRobloxSearch(){
         </div>`).join('');
     }
   }catch(e){
-    if(resultsEl) resultsEl.innerHTML='<div style="padding:12px;text-align:center;color:var(--red);font-size:13px">Lỗi kết nối API Roblox</div>';
+    if(resultsEl) resultsEl.innerHTML=`<div style="padding:12px;text-align:center;color:var(--red);font-size:13px">⚠️ Không tìm được. Hãy thử lại sau ít giây.</div>`;
   }
 }
 
@@ -1046,24 +1086,30 @@ function selectRobloxUser(id,username,displayName,avatarUrl){
 async function confirmLinkRoblox(){
   if(!selectedRobloxAccount) return;
   try{
-    await DB.update({
-      [`users/${currentUser.username}/roblox`]:selectedRobloxAccount,
-    });
+    await DB.update({[`users/${currentUser.username}/roblox`]:selectedRobloxAccount});
     currentUser.roblox=selectedRobloxAccount;
     localStorage.setItem(K_SESSION,JSON.stringify(currentUser));
     closeModal('modal-roblox');
     renderTopbar();
     renderProfile();
-    toast('🎮 Đã liên kết tài khoản Roblox!','t-success');
+    toast('🎮 Đã liên kết Roblox! Khung & danh hiệu Roblox đã mở khóa 🎉','t-success');
     selectedRobloxAccount=null;
   }catch(e){toast('Lỗi khi liên kết!','t-error');}
 }
 
 async function unlinkRoblox(){
-  if(!confirm('Gỡ liên kết tài khoản Roblox?')) return;
+  if(!confirm('Gỡ liên kết tài khoản Roblox?\nBạn sẽ mất khung và danh hiệu Roblox.')) return;
   try{
     await DB.update({[`users/${currentUser.username}/roblox`]:null});
     delete currentUser.roblox;
+    // Reset frame/title nếu đang dùng roblox-only item
+    const profile=currentUser.profile||{};
+    const updates={[`users/${currentUser.username}/roblox`]:null};
+    const curFrame=AVATAR_FRAMES.find(f=>f.id===profile.frameId);
+    const curTitle=TITLES.find(t=>t.id===profile.titleId);
+    if(curFrame?.unlock==='roblox'){updates[`users/${currentUser.username}/profile/frameId`]='none';currentUser.profile.frameId='none';}
+    if(curTitle?.unlock==='roblox'){updates[`users/${currentUser.username}/profile/titleId`]='none';currentUser.profile.titleId='none';}
+    await DB.update(updates);
     localStorage.setItem(K_SESSION,JSON.stringify(currentUser));
     renderTopbar();
     renderProfile();
@@ -1085,7 +1131,7 @@ function openRobloxModal(){
 // ════════════════════════════════════════════════════════════════
 // IMAGE UPLOAD — ImgBB
 // ════════════════════════════════════════════════════════════════
-const IMGBB_KEY='5fbc05b535bbb4da817c8c53fd6e1f18'; // demo key — thay bằng key của bạn
+const IMGBB_KEY='5fbc05b535bbb4da817c8c53fd6e1f18';
 
 async function uploadToImgBB(file){
   const formData=new FormData();
@@ -1163,7 +1209,6 @@ function renderProfile(){
   const roblox=currentUser.roblox;
   const isAd=isAdmin();
   const polls=Object.values(allPolls);
-  const joinDate=new Date(currentUser.createdAt).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'});
   const frame=AVATAR_FRAMES.find(f=>f.id===(profile.frameId||'none'));
   const title=TITLES.find(t=>t.id===(profile.titleId||'none'));
   const avatarBig=profile.avatarUrl
@@ -1171,6 +1216,7 @@ function renderProfile(){
     :`<span>${currentUser.username[0].toUpperCase()}</span>`;
   const coverStyle=profile.coverUrl?`background-image:url('${esc(profile.coverUrl)}')`:
     'background:linear-gradient(135deg,var(--bg2),var(--bg3))';
+  const voteCount=getMyVoteCount();
 
   document.getElementById('profile-content').innerHTML=`
     <div class="anim">
@@ -1194,7 +1240,7 @@ function renderProfile(){
           <div class="profile-name-row">
             <div class="profile-name">${esc(profile.displayName||currentUser.username)}</div>
             <div class="profile-username">@${esc(currentUser.username)}</div>
-            ${isAd?'<div class="admin-crown">👑 Admin</div>':''}
+            ${isAd?'<div>👑 Admin</div>':''}
           </div>
           ${title&&title.id!=='none'?`<div style="display:inline-flex;align-items:center;gap:5px;background:rgba(0,0,0,.2);border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:12px;color:${title.color};margin-bottom:8px">${title.emoji} ${esc(title.name)}</div>`:''}
           ${profile.bio?`<div class="profile-bio">${esc(profile.bio)}</div>`:''}
@@ -1215,9 +1261,21 @@ function renderProfile(){
           <div class="verified-shield">✅ Linked</div>
         </div>`:''}
       <div class="profile-stat-row">
-        <div class="stat-box"><div class="num" style="color:var(--secondary)">${Object.keys(myVotes).length}</div><div class="lbl">Đã Vote</div></div>
+        <div class="stat-box"><div class="num" style="color:var(--secondary)">${voteCount}</div><div class="lbl">Đã Vote</div></div>
         <div class="stat-box"><div class="num">${polls.length}</div><div class="lbl">Tổng Poll</div></div>
         <div class="stat-box"><div class="num" style="color:var(--green)">${polls.filter(p=>new Date(p.endTime)>new Date()).length}</div><div class="lbl">Đang Mở</div></div>
+      </div>
+      <!-- ★ Unlock progress -->
+      <div class="sidebar-card" style="margin-bottom:16px">
+        <h3>🔓 Tiến Độ Mở Khóa</h3>
+        <div style="font-size:13px;color:var(--text2);line-height:2">
+          <div>🗳 Số vote: <b style="color:var(--primary)">${voteCount}</b> lần
+            ${voteCount<5?` → cần <b>${5-voteCount}</b> vote nữa để mở 🟢 Xanh lá & 🗳 Voter Tích Cực`:
+              voteCount<10?` → cần <b>${10-voteCount}</b> vote nữa để mở 🟣 Tím`:''}
+          </div>
+          <div>🎮 Roblox: ${roblox?'<span style="color:var(--green)">✅ Đã liên kết — Mở khóa: 🎮 Roblox frame, 🎮 Robloxian, ✅ Đã Xác Minh</span>':'<span style="color:var(--text3)">Chưa liên kết</span>'}</div>
+          <div>👑 Admin: ${isAd?'<span style="color:var(--yellow)">✅ Mở khóa toàn bộ</span>':'<span style="color:var(--text3)">Chỉ Admin</span>'}</div>
+        </div>
       </div>
       <div class="sidebar-card">
         <h3>Đổi Mật Khẩu</h3>
@@ -1232,7 +1290,6 @@ function renderProfile(){
 
 function openEditProfile(){
   const profile=currentUser?.profile||{};
-  // Fill current values
   const dn=document.getElementById('edit-display-name');
   if(dn) dn.value=profile.displayName||currentUser.username;
   const bio=document.getElementById('edit-bio');
@@ -1243,28 +1300,61 @@ function openEditProfile(){
   if(cvUrl) cvUrl.value=profile.coverUrl||'';
   previewAvatarUrl();
   previewCoverUrl();
-  // Render frame selector
+
+  // ★ Render frame selector với lock system
   const fs=document.getElementById('frame-selector');
-  if(fs) fs.innerHTML=AVATAR_FRAMES.map(f=>`
-    <div class="frame-opt ${profile.frameId===f.id?'selected':''}" onclick="selectFrame('${f.id}',this)">
-      <div class="frame-preview">${f.emoji}</div>${f.name}
-    </div>`).join('');
-  // Render title selector
+  const frameUnlockInfo=document.getElementById('frame-unlock-info');
+  let lockedFrameHints=[];
+  if(fs) fs.innerHTML=AVATAR_FRAMES.map(f=>{
+    const unlocked=canUnlock(f.unlock);
+    const hint=unlockHint(f.unlock);
+    if(!unlocked&&hint) lockedFrameHints.push(`<b>${f.emoji} ${f.name}</b>: ${hint}`);
+    return `<div class="frame-opt ${profile.frameId===f.id&&unlocked?'selected':''} ${!unlocked?'locked':''}"
+      onclick="${unlocked?`selectFrame('${f.id}',this)`:`toast('${hint} để mở khóa!','t-info')`}"
+      title="${!unlocked?hint:''}">
+      <div class="frame-preview">${f.emoji}</div>
+      ${f.name}
+      ${!unlocked?`<span class="lock-tag">🔒</span>`:''}
+    </div>`;
+  }).join('');
+  if(frameUnlockInfo){
+    if(lockedFrameHints.length){frameUnlockInfo.innerHTML='Điều kiện mở khóa:<br>'+lockedFrameHints.join('<br>');frameUnlockInfo.style.display='';}
+    else frameUnlockInfo.style.display='none';
+  }
+
+  // ★ Render title selector với lock system
   const ts=document.getElementById('title-selector');
-  const availTitles=TITLES.filter(t=>t.id!=='admin'||(currentUser.role==='admin'));
-  if(ts) ts.innerHTML=availTitles.map(t=>`
-    <div class="title-opt ${profile.titleId===t.id?'selected':''}" onclick="selectTitle('${t.id}',this)" style="color:${profile.titleId===t.id?t.color:''}">
+  const titleUnlockInfo=document.getElementById('title-unlock-info');
+  let lockedTitleHints=[];
+  if(ts) ts.innerHTML=TITLES.map(t=>{
+    const unlocked=canUnlock(t.unlock);
+    const hint=unlockHint(t.unlock);
+    if(!unlocked&&hint) lockedTitleHints.push(`<b>${t.emoji} ${t.name}</b>: ${hint}`);
+    return `<div class="title-opt ${profile.titleId===t.id&&unlocked?'selected':''} ${!unlocked?'locked':''}"
+      onclick="${unlocked?`selectTitle('${t.id}',this)`:`toast('${hint} để mở khóa!','t-info')`}"
+      style="${profile.titleId===t.id&&unlocked?`color:${t.color}`:''}"
+      title="${!unlocked?hint:''}">
       ${t.emoji} ${t.name}
-    </div>`).join('');
+      ${!unlocked?`<span class="lock-tag">🔒</span>`:''}
+    </div>`;
+  }).join('');
+  if(titleUnlockInfo){
+    if(lockedTitleHints.length){titleUnlockInfo.innerHTML='Điều kiện mở khóa:<br>'+lockedTitleHints.join('<br>');titleUnlockInfo.style.display='';}
+    else titleUnlockInfo.style.display='none';
+  }
+
   openModal('modal-edit-profile');
 }
 
 function selectFrame(id,el){
-  document.querySelectorAll('.frame-opt').forEach(e=>e.classList.remove('selected'));
+  // Chỉ cho chọn nếu không bị locked
+  if(el.classList.contains('locked')) return;
+  document.querySelectorAll('.frame-opt:not(.locked)').forEach(e=>e.classList.remove('selected'));
   el.classList.add('selected');
 }
 function selectTitle(id,el){
-  document.querySelectorAll('.title-opt').forEach(e=>{e.classList.remove('selected');e.style.color='';});
+  if(el.classList.contains('locked')) return;
+  document.querySelectorAll('.title-opt:not(.locked)').forEach(e=>{e.classList.remove('selected');e.style.color='';});
   const t=TITLES.find(t=>t.id===id);
   el.classList.add('selected');
   if(t) el.style.color=t.color;
@@ -1275,26 +1365,23 @@ async function saveProfile(){
   const bio=document.getElementById('edit-bio')?.value.trim()||'';
   const avatarUrl=document.getElementById('edit-avatar-url')?.value.trim()||'';
   const coverUrl=document.getElementById('edit-cover-url')?.value.trim()||'';
-  const selectedFrameEl=document.querySelector('.frame-opt.selected');
-  const selectedTitleEl=document.querySelector('.title-opt.selected');
-  const frameId=selectedFrameEl?.onclick?.toString().match(/selectFrame\('(\w+)'/)?.[1]||
-    AVATAR_FRAMES.find(f=>selectedFrameEl?.textContent.includes(f.name))?.id||'none';
-  const titleId=selectedTitleEl?.onclick?.toString().match(/selectTitle\('(\w+)'/)?.[1]||'none';
 
-  // Get frame/title id from data attributes via text matching
+  // ★ Lấy frame/title id — chỉ lấy nếu unlocked
   let fId='none',tId='none';
-  document.querySelectorAll('.frame-opt').forEach(el=>{
-    if(el.classList.contains('selected')){
-      const match=el.getAttribute('onclick')?.match(/selectFrame\('([^']+)'/);
-      if(match) fId=match[1];
-    }
+  document.querySelectorAll('.frame-opt.selected:not(.locked)').forEach(el=>{
+    const match=el.getAttribute('onclick')?.match(/selectFrame\('([^']+)'/);
+    if(match) fId=match[1];
   });
-  document.querySelectorAll('.title-opt').forEach(el=>{
-    if(el.classList.contains('selected')){
-      const match=el.getAttribute('onclick')?.match(/selectTitle\('([^']+)'/);
-      if(match) tId=match[1];
-    }
+  document.querySelectorAll('.title-opt.selected:not(.locked)').forEach(el=>{
+    const match=el.getAttribute('onclick')?.match(/selectTitle\('([^']+)'/);
+    if(match) tId=match[1];
   });
+
+  // ★ Double-check server-side: nếu user chọn item locked thì reset về none
+  const frameObj=AVATAR_FRAMES.find(f=>f.id===fId);
+  const titleObj=TITLES.find(t=>t.id===tId);
+  if(frameObj&&!canUnlock(frameObj.unlock)) fId='none';
+  if(titleObj&&!canUnlock(titleObj.unlock)) tId='none';
 
   const newProfile={displayName,bio,avatarUrl,coverUrl,frameId:fId,titleId:tId};
   try{
